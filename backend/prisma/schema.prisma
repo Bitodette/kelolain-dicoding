@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Organization {
+  id        Int         @id @default(autoincrement())
+  name      String      @unique @db.VarChar(255)
+  users     User[]
+  products  Product[]
+  categories Category[]
+  roles     Role[]
+  transactions transactions[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@map("organizations")
+}
+
+model Product {
+  id             Int            @id @default(autoincrement())
+  name           String         @db.VarChar(255)
+  category       String?        @db.VarChar(100)
+  categoryId     Int?           @map("category_id")
+  categoryRel    Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  organizationId Int            @map("organization_id")
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  costPrice      Int            @default(0) @map("cost_price")
+  price          Int
+  stock          Int
+  status         String?        @db.VarChar(50)
+
+  batches        ProductBatch[]
+
+  @@map("products")
+}
+
+model Category {
+  id             Int            @id @default(autoincrement())
+  name           String         @db.VarChar(100)
+  organizationId Int            @map("organization_id")
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  products       Product[]
+
+  @@unique([organizationId, name])
+  @@map("categories")
+}
+
+model User {
+  id             Int            @id @default(autoincrement())
+  username       String         @unique @db.VarChar(100)
+  password       String         @db.VarChar(255)
+  name           String?        @db.VarChar(255)
+  active         Boolean        @default(true)
+  organizationId Int            @map("organization_id")
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  roles          UserRole[]
+
+  @@map("users")
+}
+
+model Role {
+  id             Int            @id @default(autoincrement())
+  name           String         @db.VarChar(100)
+  pages          String[]       @default([])
+  organizationId Int            @map("organization_id")
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users          UserRole[]
+
+  @@unique([organizationId, name])
+  @@map("roles")
+}
+
+model UserRole {
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  userId Int
+  roleId Int
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model ProductBatch {
+  id         Int      @id @default(autoincrement())
+  productId  Int
+  costPrice  Int      @map("cost_price")
+  initialQty Int      @map("initial_qty")
+  currentQty Int      @map("current_qty")
+  createdAt  DateTime @default(now())
+
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_batches")
+}
+
+model Receipt {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String?  @map("user_id")
+  organizationId String?  @map("organization_id")
+  fileName       String   @map("file_name")
+  storagePath    String   @map("storage_path")
+  publicUrl      String?  @map("public_url")
+  size           BigInt?  @map("size")
+  contentType    String?  @map("content_type")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("receipts")
+}
+
+model transactions {
+  id             Int            @id @default(autoincrement())
+  organizationId Int            @map("organization_id")
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  label          String         @db.VarChar(255)
+  type           String         @db.VarChar(20)
+  category       String         @db.VarChar(100)
+  amount    Int
+  cogs      Int      @default(0)
+  createdAt DateTime @default(now())
+  time      String?  @db.VarChar(50)
+  items     Json?
+
+  @@map("transactions")
+}

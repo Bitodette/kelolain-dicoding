@@ -1,0 +1,17 @@
+# Node modules
+/backend/node_modules/
+/frontend/node_modules/
+
+# Environment files
+*.env
+
+# Prisma
+/backend/prisma/migrations/
+/frontend/dist/
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db

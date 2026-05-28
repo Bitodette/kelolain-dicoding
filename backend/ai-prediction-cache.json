@@ -1,0 +1,26 @@
+{
+  "revenue": {
+    "key": "{\"data\":[0,0,86000]}",
+    "data": {
+      "result": [],
+      "fallback": true,
+      "message": "Data historis belum cukup untuk prediksi."
+    }
+  },
+  "demand": {
+    "key": "{\"data\":{\"JAVANA TEH MLATI 350\":{\"demand\":[0,0,4],\"stock\":6},\"Telur 1Kg\":{\"demand\":[0,0,3],\"stock\":2},\"Test\":{\"demand\":[0,0,10],\"stock\":110}}}",
+    "data": {
+      "result": [],
+      "fallback": true,
+      "message": "Data historis belum cukup untuk prediksi stok."
+    }
+  },
+  "bundling": {
+    "key": "{\"data\":[[\"JAVANA TEH MLATI 350\",\"Telur 1Kg\"]]}",
+    "data": {
+      "result": [],
+      "fallback": true,
+      "message": "Belum cukup transaksi untuk rekomendasi bundling."
+    }
+  }
+}
