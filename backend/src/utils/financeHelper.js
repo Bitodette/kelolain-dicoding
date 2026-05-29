@@ -49,9 +49,7 @@ function buildTrend({ period, start, end, transactions }) {
     }
 
     if (period === 'month') {
-        const lastDay = new Date(end).getDate();
-        const weekCount = Math.ceil(lastDay / 7);
-        const buckets = Array.from({ length: weekCount }, (_, idx) => ({
+        const buckets = Array.from({ length: 4 }, (_, idx) => ({
             key: String(idx + 1),
             label: `M${idx + 1}`,
             pemasukan: 0,
@@ -60,7 +58,7 @@ function buildTrend({ period, start, end, transactions }) {
         }));
         for (const t of transactions) {
             const dt = new Date(t.createdAt);
-            const weekIndex = Math.floor((dt.getDate() - 1) / 7);
+            const weekIndex = Math.min(3, Math.floor((dt.getDate() - 1) / 7));
             const b = buckets[weekIndex];
             if (!b) continue;
             if (isIncome(t)) add(b, 'pemasukan', t.amount);
