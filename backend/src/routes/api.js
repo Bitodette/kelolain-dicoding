@@ -1,4 +1,5 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
 
 const productController = require('../controllers/productController');
@@ -12,13 +13,20 @@ const userController = require('../controllers/userController');
 const { authenticate } = require('../middlewares/authMiddleware');
 const multer = require('multer');
 
-const receiptController = require('../controllers/receiptController');
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 },
+});
 
-const upload = multer({ storage: multer.memoryStorage() });
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    message: { error: 'Terlalu banyak percobaan login. Coba lagi 15 menit.' },
+});
 
 // ROUTES AUTH
-router.post('/auth/login', authController.login);
-router.post('/auth/register', authController.register);
+router.post('/auth/login', authLimiter, authController.login);
+router.post('/auth/register', authLimiter, authController.register);
 router.get('/auth/me', authController.me);
 
 // ROUTES PRODUK
@@ -61,9 +69,5 @@ router.get('/ai/demand', authenticate, aiController.getDemandPrediction);
 router.get('/ai/bundling', authenticate, aiController.getBundlingSuggestion);
 router.post('/ai/ocr/check-blur', authenticate, upload.single('receipt'), aiController.checkReceiptBlur);
 router.post('/ai/ocr/scan', authenticate, upload.single('receipt'), aiController.scanReceipt);
-
-// ROUTES RECEIPT STORAGE
-router.post('/receipts/upload', authenticate, upload.single('receipt'), receiptController.uploadReceipt);
-router.get('/receipts', authenticate, receiptController.getReceipts);
 
 module.exports = router;

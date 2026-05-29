@@ -5,6 +5,9 @@
 # Environment files
 *.env
 
+# AI prediction cache (auto-generated)
+/backend/ai-prediction-cache.json
+
 # Prisma
 /backend/prisma/migrations/
 /frontend/dist/

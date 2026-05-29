@@ -57,6 +57,8 @@ model User {
   password       String         @db.VarChar(255)
   name           String?        @db.VarChar(255)
   active         Boolean        @default(true)
+  scanCount      Int            @default(0) @map("scan_count")
+  scanDate       DateTime?      @map("scan_date")
   organizationId Int            @map("organization_id")
   organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   roles          UserRole[]
@@ -97,20 +99,6 @@ model ProductBatch {
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("product_batches")
-}
-
-model Receipt {
-  id             String   @id @default(uuid()) @db.Uuid
-  userId         String?  @map("user_id")
-  organizationId String?  @map("organization_id")
-  fileName       String   @map("file_name")
-  storagePath    String   @map("storage_path")
-  publicUrl      String?  @map("public_url")
-  size           BigInt?  @map("size")
-  contentType    String?  @map("content_type")
-  createdAt      DateTime @default(now()) @map("created_at")
-
-  @@map("receipts")
 }
 
 model transactions {

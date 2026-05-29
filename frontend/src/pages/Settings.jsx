@@ -20,9 +20,16 @@ export default function Settings() {
   const [error, setError] = useState(null);
   const [newRoleName, setNewRoleName] = useState('');
   const [newRolePages, setNewRolePages] = useState([]);
-  const [newUser, setNewUser] = useState({ username: '', password: '', name: '', roleIds: [] });
+  const [newUser, setNewUser] = useState({ username: '', password: '', name: '', roleIds: [], active: true });
+  const [editingUser, setEditingUser] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [currentUserRoleNames, setCurrentUserRoleNames] = useState([]);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const showSuccess = (msg) => {
+    setSuccessMessage(msg);
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -61,6 +68,7 @@ export default function Settings() {
       await axios.post(`${API_BASE}/api/roles`, { name: newRoleName.trim(), pages: newRolePages });
       setNewRoleName('');
       setNewRolePages([]);
+      showSuccess('Role berhasil ditambahkan');
       fetchData();
     } catch (err) {
       console.error('Gagal membuat role:', err);
@@ -73,11 +81,17 @@ export default function Settings() {
     if (!confirmed) return;
     try {
       await axios.delete(`${API_BASE}/api/roles/${id}`);
+      showSuccess('Role berhasil dihapus');
       fetchData();
     } catch (err) {
       console.error('Gagal menghapus role:', err);
       alert(err.response?.data?.error || 'Gagal menghapus role.');
     }
+  };
+
+  const resetUserForm = () => {
+    setNewUser({ username: '', password: '', name: '', roleIds: [], active: true });
+    setEditingUser(null);
   };
 
   const handleNewUserChange = (field, value) => {
@@ -93,28 +107,57 @@ export default function Settings() {
     }));
   };
 
-  const handleCreateUser = async () => {
-    if (!newUser.username.trim() || !newUser.password.trim()) return alert('Username dan password wajib diisi');
+  const handleEditUser = (user) => {
+    setEditingUser(user);
+    setNewUser({
+      username: user.username || '',
+      password: '',
+      name: user.name || '',
+      roleIds: user.roles.map((r) => r.id),
+      active: user.active,
+    });
+  };
+
+  const handleSaveUser = async () => {
+    if (!newUser.username.trim()) return alert('Username wajib diisi');
+    if (!editingUser && !newUser.password.trim()) return alert('Password wajib diisi');
+    if (newUser.roleIds.length === 0) return alert('Pengguna harus memiliki minimal 1 role');
+
     try {
-      await axios.post(`${API_BASE}/api/users`, {
-        username: newUser.username.trim(),
-        password: newUser.password,
-        name: newUser.name.trim() || newUser.username.trim(),
-        roleIds: newUser.roleIds,
-      });
-      setNewUser({ username: '', password: '', name: '', roleIds: [] });
+      if (editingUser) {
+        const payload = {
+          username: newUser.username.trim(),
+          name: newUser.name.trim() || newUser.username.trim(),
+          roleIds: newUser.roleIds,
+          active: newUser.active,
+        };
+        if (newUser.password.trim()) payload.password = newUser.password.trim();
+        await axios.put(`${API_BASE}/api/users/${editingUser.id}`, payload);
+        showSuccess('Pengguna berhasil diperbarui');
+      } else {
+        await axios.post(`${API_BASE}/api/users`, {
+          username: newUser.username.trim(),
+          password: newUser.password,
+          name: newUser.name.trim() || newUser.username.trim(),
+          roleIds: newUser.roleIds,
+          active: newUser.active,
+        });
+        showSuccess('Pengguna berhasil ditambahkan');
+      }
+      resetUserForm();
       fetchData();
     } catch (err) {
-      console.error('Gagal membuat pengguna:', err);
-      alert(err.response?.data?.error || 'Gagal membuat pengguna.');
+      console.error('Gagal menyimpan pengguna:', err);
+      alert(err.response?.data?.error || 'Gagal menyimpan pengguna.');
     }
   };
 
-  const handleDeleteUser = async (id) => {
-    const confirmed = window.confirm('Hapus pengguna ini?');
+  const handleDeleteUser = async (id, username) => {
+    const confirmed = window.confirm(`Hapus pengguna "${username}"?`);
     if (!confirmed) return;
     try {
       await axios.delete(`${API_BASE}/api/users/${id}`);
+      showSuccess('Pengguna berhasil dihapus');
       fetchData();
     } catch (err) {
       console.error('Gagal menghapus pengguna:', err);
@@ -144,6 +187,12 @@ export default function Settings() {
           </button>
         </div>
       </div>
+
+      {successMessage && (
+        <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">
+          {successMessage}
+        </div>
+      )}
 
       {loading ? (
         <div className="p-8 bg-white rounded-xl border border-[#E6E8EC] text-center text-[#6B7280]">Memuat data...</div>
@@ -212,7 +261,14 @@ export default function Settings() {
 
           <div className="space-y-4 bg-white rounded-xl border border-[#E6E8EC] p-6">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-bold text-[#23262F]">Pengguna</h2>
+              <h2 className="text-base font-bold text-[#23262F]">
+                {editingUser ? 'Edit Pengguna' : 'Pengguna'}
+              </h2>
+              {editingUser && (
+                <button onClick={resetUserForm} className="text-xs font-bold text-[#6B7280] hover:underline">
+                  Batal
+                </button>
+              )}
             </div>
             <div className="space-y-4">
               <div className="grid gap-3">
@@ -226,7 +282,7 @@ export default function Settings() {
                   type="password"
                   value={newUser.password}
                   onChange={(e) => handleNewUserChange('password', e.target.value)}
-                  placeholder="Password"
+                  placeholder={editingUser ? 'Kosongkan jika tidak diganti' : 'Password'}
                   className="w-full rounded-xl border border-[#E6E8EC] px-4 py-3 text-sm focus:border-[#2936C4] focus:outline-none"
                 />
                 <input
@@ -235,6 +291,15 @@ export default function Settings() {
                   placeholder="Nama pengguna"
                   className="w-full rounded-xl border border-[#E6E8EC] px-4 py-3 text-sm focus:border-[#2936C4] focus:outline-none"
                 />
+                <label className="inline-flex items-center gap-2 rounded-xl border border-[#E6E8EC] px-4 py-3 text-sm cursor-pointer hover:border-[#2936C4]">
+                  <input
+                    type="checkbox"
+                    checked={newUser.active}
+                    onChange={(e) => handleNewUserChange('active', e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-[#2936C4] focus:ring-[#2936C4]"
+                  />
+                  Akun aktif
+                </label>
               </div>
               <div className="grid gap-2">
                 <p className="text-sm font-bold text-[#3730A3]">Role yang dipilih</p>
@@ -256,8 +321,8 @@ export default function Settings() {
                   </div>
                 )}
               </div>
-              <button onClick={handleCreateUser} className="btn btn-success px-4 py-3 text-sm">
-                Tambah Pengguna
+              <button onClick={handleSaveUser} disabled={newUser.roleIds.length === 0} className={`btn px-4 py-3 text-sm ${newUser.roleIds.length === 0 ? 'bg-gray-300 cursor-not-allowed text-[#9CA3AF]' : 'btn-success'}`}>
+                {editingUser ? 'Simpan Perubahan' : 'Tambah Pengguna'}
               </button>
             </div>
             <div className="space-y-3">
@@ -265,20 +330,30 @@ export default function Settings() {
                 <p className="text-sm text-[#6B7280]">Belum ada pengguna.</p>
               ) : (
                 users.map((user) => (
-                  <div key={user.id} className="flex flex-col gap-2 rounded-xl border border-[#E6E8EC] p-4">
+                  <div key={user.id} className={`flex flex-col gap-2 rounded-xl border p-4 ${user.active ? 'border-[#E6E8EC]' : 'border-red-200 bg-red-50'}`}>
                     <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-bold text-[#23262F]">{user.username}</p>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-[#23262F]">{user.username}</p>
+                          {!user.active && <span className="text-[10px] font-bold text-[#E02D3C] bg-red-100 px-1.5 py-0.5 rounded">Nonaktif</span>}
+                        </div>
                         <p className="text-xs text-[#6B7280]">{user.name}</p>
                         <p className="text-xs text-[#6B7280]">Role: {user.roles.map((role) => role.name).join(', ') || 'Tidak ada'}</p>
                       </div>
-                      {user.id === currentUserId ? (
-                        <span className="text-xs font-semibold text-[#6B7280]">(Akun Anda)</span>
-                      ) : (
-                        <button onClick={() => handleDeleteUser(user.id)} className="text-[#E02D3C] text-xs font-bold hover:underline">
-                          Hapus
-                        </button>
-                      )}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {user.id === currentUserId ? (
+                          <span className="text-xs font-semibold text-[#6B7280]">(Akun Anda)</span>
+                        ) : (
+                          <>
+                            <button onClick={() => handleEditUser(user)} className="text-[#2936C4] text-xs font-bold hover:underline">
+                              Edit
+                            </button>
+                            <button onClick={() => handleDeleteUser(user.id, user.username)} className="text-[#E02D3C] text-xs font-bold hover:underline">
+                              Hapus
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))

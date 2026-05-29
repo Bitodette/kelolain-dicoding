@@ -1,17 +1,20 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const prisma = require('../config/db');
+const { asyncHandler } = require('../middlewares/errorHandler');
 
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
-const JWT_SECRET = process.env.JWT_SECRET || 'kelolain-secret';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    console.error('JWT_SECRET tidak diatur di environment variables. Aplikasi tidak bisa berjalan.');
+    process.exit(1);
+}
+
 const JWT_EXPIRES_IN = '8h';
 const JWT_REMEMBER_EXPIRES_IN = '30d';
 const DEFAULT_ADMIN_ROLE = 'Admin';
 const DEFAULT_ADMIN_PAGES = ['dashboard', 'keuangan', 'produk', 'kasir', 'insight', 'settings'];
 const DEFAULT_USER_ROLE = 'User';
 const DEFAULT_USER_PAGES = ['dashboard', 'keuangan', 'produk', 'kasir', 'insight'];
-const DEFAULT_ADMIN_ORG_NAME = 'Kelola.in Admin';
 
 const normalizePages = (pages) => {
   if (!Array.isArray(pages)) return [];
@@ -40,49 +43,12 @@ const buildUserResponse = (user) => {
   };
 };
 
-const ensureOrganization = async (name) => {
-  return prisma.organization.upsert({
-    where: { name },
-    update: {},
-    create: { name },
-  });
-};
-
 const ensureRoleForOrganization = async (organizationId, name, pages) => {
   return prisma.role.upsert({
     where: { organizationId_name: { organizationId, name } },
     update: { pages: normalizePages(pages) },
     create: { organizationId, name, pages: normalizePages(pages) },
   });
-};
-
-const ensureAdminAccount = async () => {
-  let adminUser = await prisma.user.findUnique({
-    where: { username: ADMIN_USERNAME },
-    include: { roles: { include: { role: true } }, organization: true },
-  });
-
-  if (adminUser) return adminUser;
-
-  const adminOrganization = await ensureOrganization(DEFAULT_ADMIN_ORG_NAME);
-  const adminRole = await ensureRoleForOrganization(adminOrganization.id, DEFAULT_ADMIN_ROLE, DEFAULT_ADMIN_PAGES);
-
-  const hashedPassword = bcrypt.hashSync(ADMIN_PASSWORD, 10);
-  adminUser = await prisma.user.create({
-    data: {
-      username: ADMIN_USERNAME,
-      password: hashedPassword,
-      name: 'Admin Kelola.in',
-      active: true,
-      organization: { connect: { id: adminOrganization.id } },
-      roles: {
-        create: [{ role: { connect: { id: adminRole.id } } }],
-      },
-    },
-    include: { roles: { include: { role: true } }, organization: true },
-  });
-
-  return adminUser;
 };
 
 const ensureDefaultUserRole = async (organizationId) => {
@@ -112,7 +78,7 @@ exports.register = async (req, res) => {
 
   const adminRole = await ensureRoleForOrganization(organization.id, DEFAULT_ADMIN_ROLE, DEFAULT_ADMIN_PAGES);
   await ensureDefaultUserRole(organization.id);
-  const hashedPassword = bcrypt.hashSync(password, 10);
+  const hashedPassword = await bcrypt.hash(password, 10);
 
   const user = await prisma.user.create({
     data: {
@@ -147,10 +113,6 @@ exports.login = async (req, res) => {
     include: { roles: { include: { role: true } }, organization: true },
   });
 
-  if (!user && username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-    user = await ensureAdminAccount();
-  }
-
   if (!user) {
     return res.status(401).json({ error: 'Username atau password salah' });
   }
@@ -159,7 +121,7 @@ exports.login = async (req, res) => {
     return res.status(403).json({ error: 'Akun tidak aktif' });
   }
 
-  const passwordMatches = bcrypt.compareSync(password, user.password);
+  const passwordMatches = await bcrypt.compare(password, user.password);
   if (!passwordMatches) {
     return res.status(401).json({ error: 'Username atau password salah' });
   }
@@ -198,10 +160,4 @@ exports.me = async (req, res) => {
   }
 };
 
-exports.initializeDefaultAdmin = async () => {
-  try {
-    await ensureAdminAccount();
-  } catch (err) {
-    console.error('Gagal membuat akun admin default:', err.message);
-  }
-};
+

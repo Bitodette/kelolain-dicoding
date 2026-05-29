@@ -1,4 +1,5 @@
 const prisma = require('../config/db');
+const { asyncHandler } = require('../middlewares/errorHandler');
 const { parseLocalDateOnly, startOfDay, endOfDay } = require('../utils/dateHelper');
 const { getCartFromItems, computeCogsFromCart } = require('../utils/financeHelper');
 
@@ -79,17 +80,21 @@ async function computeFifoCogsAndUpdateBatches(cart, orgId) {
         });
     }
 
-    for (const [productId, soldQty] of soldByProduct.entries()) {
-        const product = await prisma.product.findFirst({ where: { id: productId, organizationId: orgId } });
-        if (!product) continue;
-        const newStock = Math.max(0, Number(product.stock || 0) - soldQty);
-        await prisma.product.update({
-            where: { id: productId },
-            data: {
-                stock: newStock,
-                status: getStatusFromStock(newStock),
-            },
+    const productIdsToUpdate = Array.from(soldByProduct.entries());
+    if (productIdsToUpdate.length > 0) {
+        const products = await prisma.product.findMany({
+            where: { id: { in: productIdsToUpdate.map(([id]) => id) }, organizationId: orgId },
+            select: { id: true, stock: true },
         });
+        const updatePromises = products.map((product) => {
+            const soldQty = soldByProduct.get(product.id) || 0;
+            const newStock = Math.max(0, Number(product.stock || 0) - soldQty);
+            return prisma.product.update({
+                where: { id: product.id },
+                data: { stock: newStock, status: getStatusFromStock(newStock) },
+            });
+        });
+        await Promise.all(updatePromises);
     }
 
     return cogs;
@@ -102,142 +107,115 @@ const normalizeTypeWrite = (value) => {
     return value;
 };
 
-exports.getTransactions = async (req, res) => {
-    try {
-        const { start, end, limit } = req.query;
-        const startDate = parseLocalDateOnly(start) || (start ? new Date(start) : null);
-        const endDate = parseLocalDateOnly(end) || (end ? new Date(end) : null);
-        const where = {};
-        if (startDate || endDate) {
-            where.createdAt = {};
-            if (startDate) where.createdAt.gte = startOfDay(startDate);
-            if (endDate) where.createdAt.lte = endOfDay(endDate);
-        }
-        const take = limit ? Math.min(200, Math.max(1, Number(limit))) : undefined;
-
-        const transactions = await prisma.transactions.findMany({
-            where: { ...where, organizationId: req.user.organizationId },
-            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-            take,
-        });
-        res.json(transactions);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).json({ error: 'Terjadi kesalahan pada server saat mengambil transaksi' });
+exports.getTransactions = asyncHandler(async (req, res) => {
+    const { start, end, limit } = req.query;
+    const startDate = parseLocalDateOnly(start) || (start ? new Date(start) : null);
+    const endDate = parseLocalDateOnly(end) || (end ? new Date(end) : null);
+    const where = {};
+    if (startDate || endDate) {
+        where.createdAt = {};
+        if (startDate) where.createdAt.gte = startOfDay(startDate);
+        if (endDate) where.createdAt.lte = endOfDay(endDate);
     }
-};
+    const take = limit ? Math.min(200, Math.max(1, Number(limit))) : undefined;
 
-exports.createTransaction = async (req, res) => {
-    try {
-        const { label, type, category, amount, date, items, cogs } = req.body;
-        const createdAt = date ? new Date(date) : new Date();
+    const transactions = await prisma.transactions.findMany({
+        where: { ...where, organizationId: req.user.organizationId },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take,
+    });
+    res.json(transactions);
+});
 
-        let cogsValue = 0;
-        const cart = getCartFromItems(items);
-        const normalizedType = normalizeTypeWrite(type);
+exports.createTransaction = asyncHandler(async (req, res) => {
+    const { label, type, category, amount, date, items, cogs } = req.body;
+    const createdAt = date ? new Date(date) : new Date();
 
-        if (normalizedType === 'Masuk' && cart.length > 0) {
-            try {
-                cogsValue = await computeFifoCogsAndUpdateBatches(cart, req.user.organizationId);
-            } catch (error) {
-                return res.status(400).json({ error: error.message });
-            }
+    let cogsValue = 0;
+    const cart = getCartFromItems(items);
+    const normalizedType = normalizeTypeWrite(type);
+
+    if (normalizedType === 'Masuk' && cart.length > 0) {
+        try {
+            cogsValue = await computeFifoCogsAndUpdateBatches(cart, req.user.organizationId);
+        } catch (error) {
+            return res.status(400).json({ error: error.message });
+        }
+    } else {
+        const cogsNum = Number(cogs);
+        if (Number.isFinite(cogsNum) && cogsNum >= 0) {
+            cogsValue = Math.round(cogsNum);
         } else {
-            const cogsNum = Number(cogs);
-            if (Number.isFinite(cogsNum) && cogsNum >= 0) {
-                cogsValue = Math.round(cogsNum);
-            } else {
-                const productIds = Array.from(new Set(cart.map((x) => Number(x?.productId)).filter((x) => Number.isFinite(x))));
-                const products = productIds.length
-                    ? await prisma.product.findMany({ where: { id: { in: productIds }, organizationId: req.user.organizationId }, select: { id: true, costPrice: true } })
-                    : [];
-                const productCostById = new Map(products.map((p) => [p.id, p.costPrice]));
-                cogsValue = computeCogsFromCart(cart, productCostById);
-            }
-        }
-
-        const created = await prisma.transactions.create({
-            data: {
-                organizationId: req.user.organizationId,
-                label,
-                type: normalizeTypeWrite(type),
-                category,
-                amount: Number.isFinite(Number(amount)) ? parseInt(amount, 10) : 0,
-                cogs: cogsValue,
-                createdAt,
-                items: items || null 
-            }
-        });
-        res.status(201).json(created);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).json({ error: 'Gagal mencatat transaksi' });
-    }
-};
-
-exports.getTransactionById = async (req, res) => {
-    try {
-        const id = Number(req.params.id);
-        if (!Number.isFinite(id)) return res.status(400).json({ error: 'ID tidak valid' });
-
-        const tx = await prisma.transactions.findFirst({ where: { id, organizationId: req.user.organizationId } });
-        if (!tx) return res.status(404).json({ error: 'Transaksi tidak ditemukan' });
-
-        res.json(tx);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).json({ error: 'Terjadi kesalahan pada server' });
-    }
-};
-
-exports.updateTransaction = async (req, res) => {
-    try {
-        const id = Number(req.params.id);
-        if (!Number.isFinite(id)) return res.status(400).json({ error: 'ID tidak valid' });
-
-        const { label, type, category, amount, date, items, cogs } = req.body;
-        const patch = {
-            ...(label !== undefined ? { label } : {}),
-            ...(type !== undefined ? { type: normalizeTypeWrite(type) } : {}),
-            ...(category !== undefined ? { category } : {}),
-            ...(amount !== undefined ? { amount: Number.isFinite(Number(amount)) ? parseInt(amount, 10) : 0 } : {}),
-            ...(date !== undefined ? { createdAt: date ? new Date(date) : new Date() } : {}),
-            ...(items !== undefined ? { items: items || null } : {}),
-        };
-
-        if (cogs !== undefined) {
-            const cogsNum = Number(cogs);
-            patch.cogs = Number.isFinite(cogsNum) && cogsNum >= 0 ? Math.round(cogsNum) : 0;
-        } else if (items !== undefined) {
-            const cart = getCartFromItems(items);
             const productIds = Array.from(new Set(cart.map((x) => Number(x?.productId)).filter((x) => Number.isFinite(x))));
             const products = productIds.length
                 ? await prisma.product.findMany({ where: { id: { in: productIds }, organizationId: req.user.organizationId }, select: { id: true, costPrice: true } })
                 : [];
             const productCostById = new Map(products.map((p) => [p.id, p.costPrice]));
-            patch.cogs = computeCogsFromCart(cart, productCostById);
+            cogsValue = computeCogsFromCart(cart, productCostById);
         }
-
-        const updateResult = await prisma.transactions.updateMany({ where: { id, organizationId: req.user.organizationId }, data: patch });
-        if (updateResult.count === 0) return res.status(404).json({ error: 'Transaksi tidak ditemukan' });
-        const updated = await prisma.transactions.findFirst({ where: { id, organizationId: req.user.organizationId } });
-        res.json(updated);
-    } catch (err) {
-        if (err.code === 'P2025') return res.status(404).json({ error: 'Transaksi tidak ditemukan' });
-        console.error(err.message);
-        res.status(500).json({ error: 'Gagal memperbarui transaksi' });
     }
-};
 
-exports.deleteTransaction = async (req, res) => {
-    try {
-        const id = Number(req.params.id);
-        const deleteResult = await prisma.transactions.deleteMany({ where: { id, organizationId: req.user.organizationId } });
-        if (deleteResult.count === 0) return res.status(404).json({ error: 'Transaksi tidak ditemukan' });
-        res.json({ message: 'Transaksi berhasil dihapus' });
-    } catch (err) {
-        if (err.code === 'P2025') return res.status(404).json({ error: 'Transaksi tidak ditemukan' });
-        console.error(err.message);
-        res.status(500).json({ error: 'Gagal menghapus transaksi' });
+    const created = await prisma.transactions.create({
+        data: {
+            organizationId: req.user.organizationId,
+            label,
+            type: normalizeTypeWrite(type),
+            category,
+            amount: Number.isFinite(Number(amount)) ? parseInt(amount, 10) : 0,
+            cogs: cogsValue,
+            createdAt,
+            items: items || null 
+        }
+    });
+    res.status(201).json(created);
+});
+
+exports.getTransactionById = asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: 'ID tidak valid' });
+
+    const tx = await prisma.transactions.findFirst({ where: { id, organizationId: req.user.organizationId } });
+    if (!tx) return res.status(404).json({ error: 'Transaksi tidak ditemukan' });
+
+    res.json(tx);
+});
+
+exports.updateTransaction = asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: 'ID tidak valid' });
+
+    const { label, type, category, amount, date, items, cogs } = req.body;
+    const patch = {
+        ...(label !== undefined ? { label } : {}),
+        ...(type !== undefined ? { type: normalizeTypeWrite(type) } : {}),
+        ...(category !== undefined ? { category } : {}),
+        ...(amount !== undefined ? { amount: Number.isFinite(Number(amount)) ? parseInt(amount, 10) : 0 } : {}),
+        ...(date !== undefined ? { createdAt: date ? new Date(date) : new Date() } : {}),
+        ...(items !== undefined ? { items: items || null } : {}),
+    };
+
+    if (cogs !== undefined) {
+        const cogsNum = Number(cogs);
+        patch.cogs = Number.isFinite(cogsNum) && cogsNum >= 0 ? Math.round(cogsNum) : 0;
+    } else if (items !== undefined) {
+        const cart = getCartFromItems(items);
+        const productIds = Array.from(new Set(cart.map((x) => Number(x?.productId)).filter((x) => Number.isFinite(x))));
+        const products = productIds.length
+            ? await prisma.product.findMany({ where: { id: { in: productIds }, organizationId: req.user.organizationId }, select: { id: true, costPrice: true } })
+            : [];
+        const productCostById = new Map(products.map((p) => [p.id, p.costPrice]));
+        patch.cogs = computeCogsFromCart(cart, productCostById);
     }
-};
+
+    const updateResult = await prisma.transactions.updateMany({ where: { id, organizationId: req.user.organizationId }, data: patch });
+    if (updateResult.count === 0) return res.status(404).json({ error: 'Transaksi tidak ditemukan' });
+    const updated = await prisma.transactions.findFirst({ where: { id, organizationId: req.user.organizationId } });
+    res.json(updated);
+});
+
+exports.deleteTransaction = asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const deleteResult = await prisma.transactions.deleteMany({ where: { id, organizationId: req.user.organizationId } });
+    if (deleteResult.count === 0) return res.status(404).json({ error: 'Transaksi tidak ditemukan' });
+    res.json({ message: 'Transaksi berhasil dihapus' });
+});
