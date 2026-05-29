@@ -19,47 +19,61 @@ import { API_BASE } from '../utils/api';
 
 const formatCurrency = (value) => `Rp ${Number(value || 0).toLocaleString("id-ID")}`;
 
-export default function Insight({ initialData = {} }) {
-    const [isLoading, setIsLoading] = useState(!initialData?.fetchedAt);
+export default function Insight() {
+    const [loading, setLoading] = useState({ revenue: true, demand: true, bundling: true });
     const [error, setError] = useState(null);
-    const [revenueForecast, setRevenueForecast] = useState(initialData.revenueForecast || []);
-    const [demandTop5, setDemandTop5] = useState(initialData.demandTop5 || []);
-    const [bundlingSuggestions, setBundlingSuggestions] = useState(initialData.bundlingSuggestions || []);
+    const [revenueForecast, setRevenueForecast] = useState([]);
+    const [demandTop5, setDemandTop5] = useState([]);
+    const [bundlingSuggestions, setBundlingSuggestions] = useState([]);
 
     useEffect(() => {
-        if (initialData?.fetchedAt) {
-            setIsLoading(false);
-            setError(null);
-            setRevenueForecast(initialData.revenueForecast || []);
-            setDemandTop5(initialData.demandTop5 || []);
-            setBundlingSuggestions(initialData.bundlingSuggestions || []);
-            return;
-        }
+        const controller = new AbortController();
 
-        const fetchInsightData = async () => {
-            try {
-                setIsLoading(true);
-                setError(null);
+        const fetchRevenue = axios.get(`${API_BASE}/api/ai/revenue`, { signal: controller.signal })
+            .then((res) => {
+                setRevenueForecast(Array.isArray(res.data?.result) ? res.data.result : []);
+                setLoading((prev) => ({ ...prev, revenue: false }));
+            })
+            .catch((err) => {
+                if (!axios.isCancel(err)) {
+                    console.error("Error revenue:", err);
+                    setLoading((prev) => ({ ...prev, revenue: false }));
+                }
+            });
 
-                const [revenueRes, demandRes, bundlingRes] = await Promise.all([
-                    axios.get(`${API_BASE}/api/ai/revenue`),
-                    axios.get(`${API_BASE}/api/ai/demand`),
-                    axios.get(`${API_BASE}/api/ai/bundling`),
-                ]);
+        const fetchDemand = axios.get(`${API_BASE}/api/ai/demand`, { signal: controller.signal })
+            .then((res) => {
+                setDemandTop5(Array.isArray(res.data?.result) ? res.data.result : []);
+                setLoading((prev) => ({ ...prev, demand: false }));
+            })
+            .catch((err) => {
+                if (!axios.isCancel(err)) {
+                    console.error("Error demand:", err);
+                    setLoading((prev) => ({ ...prev, demand: false }));
+                }
+            });
 
-                setRevenueForecast(Array.isArray(revenueRes.data?.result) ? revenueRes.data.result : []);
-                setDemandTop5(Array.isArray(demandRes.data?.result) ? demandRes.data.result : []);
-                setBundlingSuggestions(Array.isArray(bundlingRes.data?.result) ? bundlingRes.data.result : []);
-            } catch (err) {
-                console.error("Error memuat AI Insight:", err);
+        const fetchBundling = axios.get(`${API_BASE}/api/ai/bundling`, { signal: controller.signal })
+            .then((res) => {
+                setBundlingSuggestions(Array.isArray(res.data?.result) ? res.data.result : []);
+                setLoading((prev) => ({ ...prev, bundling: false }));
+            })
+            .catch((err) => {
+                if (!axios.isCancel(err)) {
+                    console.error("Error bundling:", err);
+                    setLoading((prev) => ({ ...prev, bundling: false }));
+                }
+            });
+
+        Promise.allSettled([fetchRevenue, fetchDemand, fetchBundling]).then((results) => {
+            const allFailed = results.every((r) => r.status === 'rejected');
+            if (allFailed) {
                 setError("Gagal memuat insight AI. Coba refresh kembali.");
-            } finally {
-                setIsLoading(false);
             }
-        };
+        });
 
-        fetchInsightData();
-    }, [initialData?.fetchedAt]);
+        return () => controller.abort();
+    }, []);
 
     const validRevenueForecast = revenueForecast.filter((value) => {
         const numberValue = Number(value);
@@ -92,7 +106,7 @@ export default function Insight({ initialData = {} }) {
                     <div>
                         <p className="text-sm font-bold text-emerald-800">Prediksi Penghasilan Kotor 7 Hari</p>
                         <p className="text-xs text-emerald-700 mt-1 leading-relaxed">
-                            {isLoading
+                            {loading.revenue
                                 ? 'Memuat prediksi...'
                                 : !hasRevenueForecastData
                                     ? 'Perlu minimal 3 hari data untuk menampilkan prediksi revenue.'
@@ -112,7 +126,7 @@ export default function Insight({ initialData = {} }) {
                     <div>
                         <p className="text-sm font-bold text-indigo-800">Rekomendasi Bundling</p>
                         <p className="text-xs text-indigo-700 mt-1 leading-relaxed">
-                            {isLoading
+                            {loading.bundling
                                 ? 'Memuat bundling...'
                                 : bundlingSuggestions.length > 0
                                     ? `Ditemukan ${bundlingSuggestions.length} rekomendasi bundling.`
@@ -130,7 +144,7 @@ export default function Insight({ initialData = {} }) {
                     <div>
                         <p className="text-sm font-bold text-amber-800">Produk Berisiko Habis</p>
                         <p className="text-xs text-amber-700 mt-1 leading-relaxed">
-                            {isLoading
+                            {loading.demand
                                 ? 'Memuat prediksi stok...'
                                 : topRisk
                                     ? `${topRisk.product} diprediksi habis dalam ${topRisk.lasting_day} hari.`
@@ -154,7 +168,7 @@ export default function Insight({ initialData = {} }) {
                 </div>
 
                 <div className="h-[300px] w-full">
-                    {isLoading ? (
+                    {loading.revenue ? (
                         <div className="h-full w-full flex items-center justify-center text-sm text-[#8B95A7]">Memuat prediksi revenue...</div>
                     ) : error ? (
                         <div className="h-full w-full flex items-center justify-center text-sm text-[#E02D3C]">{error}</div>
@@ -197,19 +211,23 @@ export default function Insight({ initialData = {} }) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#E6E8EC]">
-                                {demandTop5.length > 0 ? (
-                                    demandTop5.map((item, index) => (
-                                        <tr key={`${item.product}-${index}`} className="hover:bg-gray-50 transition-colors">
-                                            <td className="py-3 text-sm font-medium text-[#23262F]">{item.product}</td>
-                                            <td className="py-3 text-center text-sm text-[#6B7280]">{item.lasting_day} hari</td>
-                                            <td className="py-3 text-right text-sm font-semibold text-[#2936C4]">{item.total_demand}</td>
+                                    {loading.demand ? (
+                                        <tr>
+                                            <td colSpan="3" className="py-8 text-center text-sm text-[#8B95A7]">Memuat data...</td>
                                         </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="3" className="py-8 text-center text-sm text-[#8B95A7]">Tidak ada data produk risiko habis.</td>
-                                    </tr>
-                                )}
+                                    ) : demandTop5.length > 0 ? (
+                                        demandTop5.map((item, index) => (
+                                            <tr key={`${item.product}-${index}`} className="hover:bg-gray-50 transition-colors">
+                                                <td className="py-3 text-sm font-medium text-[#23262F]">{item.product}</td>
+                                                <td className="py-3 text-center text-sm text-[#6B7280]">{item.lasting_day} hari</td>
+                                                <td className="py-3 text-right text-sm font-semibold text-[#2936C4]">{item.total_demand}</td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="3" className="py-8 text-center text-sm text-[#8B95A7]">Tidak ada data produk risiko habis.</td>
+                                        </tr>
+                                    )}
                             </tbody>
                         </table>
                     </div>
@@ -231,7 +249,11 @@ export default function Insight({ initialData = {} }) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[#E6E8EC]">
-                                {bundlingRows.length > 0 ? (
+                                {loading.bundling ? (
+                                    <tr>
+                                        <td className="py-8 text-center text-sm text-[#8B95A7]">Memuat data...</td>
+                                    </tr>
+                                ) : bundlingRows.length > 0 ? (
                                     bundlingRows.map((row) => (
                                         <tr key={row.id} className="hover:bg-gray-50 transition-colors">
                                             <td className="py-3 text-sm text-[#23262F]">{row.suggestion}</td>

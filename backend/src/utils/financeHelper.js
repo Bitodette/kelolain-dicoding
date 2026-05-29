@@ -10,12 +10,6 @@ function buildTrend({ period, start, end, transactions }) {
         const ty = normalizeType(t.type);
         return ty === 'keluar' || ty === 'pengeluaran' || ty === 'expense';
     };
-    const isRestock = (t) => {
-        const cat = String(t.category || '').toLowerCase();
-        const label = String(t.label || '').toLowerCase();
-        return cat.includes('restock') || label.includes('restock');
-    };
-
     const add = (acc, key, amount) => {
         acc[key] = (acc[key] || 0) + (Number(amount) || 0);
         return acc;
@@ -32,7 +26,7 @@ function buildTrend({ period, start, end, transactions }) {
     const getProfitDelta = (t) => {
         const amt = Number(t?.amount) || 0;
         if (isIncome(t)) return amt - getCogs(t);
-        if (isExpense(t)) return isRestock(t) ? 0 : -amt;
+        if (isExpense(t)) return -amt;
         return 0;
     };
 
@@ -205,14 +199,9 @@ function computeCogsFromCart(cart, productCostById) {
 }
 
 function buildExpenseBreakdown(transactions) {
-    const isRestock = (t) => {
-        const cat = String(t.category || '').toLowerCase();
-        const label = String(t.label || '').toLowerCase();
-        return cat.includes('restock') || label.includes('restock');
-    };
     const expenses = transactions.filter((t) => {
         const ty = String(t.type || '').toLowerCase().trim();
-        return (ty === 'keluar' || ty === 'pengeluaran' || ty === 'expense') && !isRestock(t);
+        return (ty === 'keluar' || ty === 'pengeluaran' || ty === 'expense');
     });
     if (expenses.length === 0) return [];
 
