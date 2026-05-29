@@ -384,7 +384,7 @@ export default function Keuangan() {
     };
 
     return (
-        <div className="flex flex-col gap-4 relative">
+        <div className="flex flex-col gap-4 relative max-w-screen w-screen">
             
             {/* --- HEADER --- */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
