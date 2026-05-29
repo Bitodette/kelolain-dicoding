@@ -1,7 +1,7 @@
 const prisma = require('../config/db');
 const { asyncHandler } = require('../middlewares/errorHandler');
 const { getWeekRange, getMonthRange, getYearRange, parseLocalDateOnly, startOfDay, endOfDay } = require('../utils/dateHelper');
-const { getCartFromItems, computeCogsFromCart, buildTrend, buildExpenseBreakdown } = require('../utils/financeHelper');
+const { buildTrend, buildExpenseBreakdown } = require('../utils/financeHelper');
 
 async function getAvailability(prismaClient, organizationId) {
     const now = new Date();
@@ -58,31 +58,10 @@ exports.getFinanceOverview = asyncHandler(async (req, res) => {
     });
 
     const normalizeType = (value) => String(value || '').toLowerCase().trim();
-    const isIncome = (t) => {
+    const isExpenseCat = (t) => {
         const ty = normalizeType(t.type);
-        return ty === 'masuk' || ty === 'pemasukan' || ty === 'income';
+        return ty === 'keluar' || ty === 'pengeluaran' || ty === 'expense';
     };
-    // hitung cogs kalo transaksi lama belum punya data hpp
-    const needCogsTx = tx.filter((t) => isIncome(t) && (Number(t.cogs) || 0) <= 0);
-    const productIdsNeeded = new Set();
-    for (const t of needCogsTx) {
-        const cart = getCartFromItems(t.items);
-        for (const line of cart) {
-            const pid = Number(line?.productId);
-            if (Number.isFinite(pid)) productIdsNeeded.add(pid);
-        }
-    }
-
-    const products = productIdsNeeded.size
-        ? await prisma.product.findMany({ where: { id: { in: Array.from(productIdsNeeded) }, organizationId: req.user.organizationId }, select: { id: true, costPrice: true } })
-        : [];
-    const productCostById = new Map(products.map((p) => [p.id, p.costPrice]));
-
-    for (const t of needCogsTx) {
-        const cart = getCartFromItems(t.items);
-        if (cart.length === 0) continue;
-        t.__computedCogs = computeCogsFromCart(cart, productCostById);
-    }
 
     let pemasukan = 0;
     let pengeluaran = 0;
@@ -93,10 +72,9 @@ exports.getFinanceOverview = asyncHandler(async (req, res) => {
 
         if (ty === 'masuk' || ty === 'pemasukan' || ty === 'income') {
             pemasukan += amt;
-            const usedCogs = (Number(t.cogs) || 0) > 0 ? (Number(t.cogs) || 0) : (Number(t.__computedCogs) || 0);
-            keuntunganBersih += amt - usedCogs;
+            keuntunganBersih += amt;
         }
-        if (ty === 'keluar' || ty === 'pengeluaran' || ty === 'expense') {
+        if (isExpenseCat(t)) {
             pengeluaran += amt;
             keuntunganBersih -= amt;
         }

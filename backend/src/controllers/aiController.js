@@ -403,34 +403,30 @@ exports.scanReceipt = asyncHandler(async (req, res) => {
 
     const compressed = await compressImage(req.file.buffer);
 
-    // cek blur dulu
-    let isBlurry = false;
+    // cek blur dulu (kalo gagal/gak jelas, tetep lanjut extraction)
+    const blurFormData = createAiFormData(req.file, compressed);
     try {
-        const blurData = await postToAi(`${AI_BASE_URL}/predict/blur`, createAiFormData(req.file, compressed));
-        isBlurry = blurData?.prediction === 'blurry';
+        const blurRes = await axios.post(`${AI_BASE_URL}/predict/blur`, blurFormData, {
+            headers: blurFormData.getHeaders(),
+            timeout: 15000,
+        });
+        if (blurRes?.data?.prediction === 'blurry') {
+            console.warn('Blur check: image classified as blurry, proceeding anyway');
+        }
     } catch (err) {
-        console.error('Blur check AI service error:', err.message);
-        return res.status(502).json({
-            message: 'Gagal memeriksa kualitas gambar. Silakan coba lagi.',
-            error: 'blur_check_failed',
-        });
+        console.error('Blur check skipped (AI service error):', err.message);
     }
 
-    if (isBlurry) {
-        return res.status(422).json({
-            message: 'Gambar struk buram atau tidak jelas. Silakan coba lagi.',
-            error: 'blurry_image',
-        });
-    }
-
-    // kalo lolos blur check, baru extract text
+    // extract text
     let extractData;
     try {
         extractData = await postToAi(`${RECEIPT_SCANNER_URL}/extract-text`, createAiFormData(req.file, compressed));
     } catch (err) {
-        console.error('Receipt scanner AI service error:', err.message);
+        console.error('Receipt scanner AI service error (URL:', `${RECEIPT_SCANNER_URL}/extract-text):`, err.message);
         if (err.response) {
             console.error('Scanner response status:', err.response.status, 'data:', JSON.stringify(err.response.data));
+        } else {
+            console.error('No response from AI service — check RECEIPT_SCANNER_URL or network');
         }
         return res.status(502).json({
             message: 'Gagal memindai struk. Silakan coba lagi.',

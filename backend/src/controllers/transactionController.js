@@ -139,7 +139,8 @@ exports.createTransaction = asyncHandler(async (req, res) => {
 
     if (normalizedType === 'Masuk' && cart.length > 0) {
         try {
-            cogsValue = await computeFifoCogsAndUpdateBatches(cart, req.user.organizationId);
+            await computeFifoCogsAndUpdateBatches(cart, req.user.organizationId);
+            cogsValue = 0;
         } catch (error) {
             return res.status(400).json({ error: error.message });
         }
