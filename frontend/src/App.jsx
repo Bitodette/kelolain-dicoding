@@ -105,6 +105,7 @@ function App() {
     }
   };
 
+  // prefetch insight data pas user browsing, cache 10 menit
   useEffect(() => {
     if (!isAuthenticated) {
       return;

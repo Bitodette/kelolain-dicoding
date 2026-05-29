@@ -48,6 +48,7 @@ exports.updateRole = asyncHandler(async (req, res) => {
 exports.deleteRole = asyncHandler(async (req, res) => {
     const id = Number(req.params.id);
 
+    // cek apakah role masih dipake user
     const roleUsage = await prisma.userRole.count({
         where: {
             roleId: id,

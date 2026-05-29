@@ -68,6 +68,7 @@ exports.getFinanceOverview = asyncHandler(async (req, res) => {
         return cat.includes('restock') || label.includes('restock');
     };
 
+    // hitung cogs kalo transaksi lama belum punya data hpp
     const needCogsTx = tx.filter((t) => isIncome(t) && (Number(t.cogs) || 0) <= 0);
     const productIdsNeeded = new Set();
     for (const t of needCogsTx) {

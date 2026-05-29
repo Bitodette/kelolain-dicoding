@@ -36,6 +36,7 @@ export default function Dashboard() {
         setUserName(stored?.user?.name || stored?.user?.username || 'Faried');
     }, []);
 
+    // salam berdasarkan jam
     const getGreeting = () => {
         const hour = new Date().getHours();
         if (hour >= 5 && hour < 12) return "Pagi";

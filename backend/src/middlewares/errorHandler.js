@@ -5,10 +5,12 @@ const asyncHandler = (fn) => (req, res, next) => {
 const errorHandler = (err, req, res, next) => {
     console.error(err);
 
+    // prisma: record not found
     if (err.code === 'P2025') {
         return res.status(404).json({ error: 'Data tidak ditemukan' });
     }
 
+    // jwt expired / invalid
     if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
         return res.status(401).json({ error: 'Token tidak valid' });
     }

@@ -9,6 +9,7 @@ const getStatusFromStock = (stock) => {
     return 'Aman';
 };
 
+// fifo: ambil batch paling lama dulu buat hitung hpp
 async function computeFifoCogsAndUpdateBatches(cart, orgId) {
     const normalizedCart = cart
         .map((line) => ({

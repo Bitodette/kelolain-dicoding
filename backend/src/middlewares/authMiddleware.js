@@ -7,6 +7,7 @@ if (!JWT_SECRET) {
     process.exit(1);
 }
 
+// verify jwt + attach user ke req
 exports.authenticate = async (req, res, next) => {
     const authHeader = req.headers.authorization || '';
     const token = authHeader.replace(/^Bearer\s+/i, '');

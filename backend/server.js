@@ -10,6 +10,7 @@ const { errorHandler } = require('./src/middlewares/errorHandler');
 
 const app = express();
 
+// needed for rate limiter behind render/vercel proxy
 app.set('trust proxy', 1);
 app.use(helmet());
 

@@ -585,9 +585,11 @@ export default function Produk() {
                 </div>
             </div>
 
+            {/* popup scan struk */}
             {isScanPopupOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-fade-in-up">
+                        {/* header */}
                         <div className="px-5 py-4 border-b border-[#E6E8EC] flex items-center justify-between">
                             <div>
                                 <h3 className="text-lg font-bold text-[#23262F]">Scan & Ekstrak Struk</h3>
@@ -599,6 +601,7 @@ export default function Produk() {
                         </div>
 
                         <div className="p-5 space-y-4">
+                            {/* belum milih gambar */}
                             {!selectedReceiptPreview ? (
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <button onClick={openCamera} className="btn btn-secondary px-4 py-3 text-sm flex items-center justify-center gap-2">
@@ -612,6 +615,7 @@ export default function Produk() {
                                 </div>
                             ) : (
                                 <div className="space-y-4">
+                                    {/* preview gambar + status blur */}
                                     <div className="relative rounded-2xl border border-[#E6E8EC] bg-slate-50 max-h-[55vh] overflow-y-auto">
                                         <img src={selectedReceiptPreview} alt="Preview Struk" className="w-full h-auto" />
                                         <div className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${blurStatus === 'sharp' ? 'bg-emerald-100 text-emerald-700' : blurStatus === 'blurry' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
@@ -619,6 +623,7 @@ export default function Produk() {
                                         </div>
                                     </div>
 
+                                    {/* tombol aksi */}
                                     <div className="grid gap-3 sm:grid-cols-2">
                                         <button onClick={() => { setSelectedReceiptFile(null); setSelectedReceiptPreview(null); setBlurStatus(null); setScanError(null); }} className="btn btn-secondary px-4 py-3 text-sm">
                                             Coba Lagi
@@ -652,6 +657,7 @@ export default function Produk() {
                                 <p className="text-sm text-red-600">{scanError}</p>
                             )}
 
+                            {/* kamera */}
                             {isCameraOpen && (
                                 <div className="space-y-3">
                                     <video ref={cameraVideoRef} className="w-full h-72 rounded-2xl bg-black object-cover" autoPlay playsInline muted />

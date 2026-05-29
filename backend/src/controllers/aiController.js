@@ -15,6 +15,7 @@ if (!AI_BASE_URL || !RECEIPT_SCANNER_URL) {
 const CACHE_FILE = path.resolve(__dirname, '..', '..', 'ai-prediction-cache.json');
 const MAX_DAILY_SCANS = 10;
 
+// cache biar ga manggil ai terus tiap request
 const defaultCache = {
     revenue: { key: null, data: null },
     demand: { key: null, data: null },
@@ -116,7 +117,7 @@ const safeAiRequest = async (url, payload) => {
     return aiResponse.data;
 };
 
-// PREDIKSI REVENUE
+// --- prediksi & fallback (kalo ai mati) ---
 exports.getRevenuePrediction = asyncHandler(async (req, res) => {
     const revenueData = [0, 0, 0];
     const today = new Date();
@@ -256,7 +257,7 @@ exports.getDemandPrediction = asyncHandler(async (req, res) => {
     res.json(aiResponse);
 });
 
-// REKOMENDASI BUNDLING
+// rekomendasi bundling
 exports.getBundlingSuggestion = asyncHandler(async (req, res) => {
     const transactions = await prisma.transactions.findMany({
         where: { organizationId: req.user.organizationId, type: 'Masuk' },
@@ -308,6 +309,7 @@ exports.getBundlingSuggestion = asyncHandler(async (req, res) => {
     res.json(aiResponse);
 });
 
+// cek quota scan harian (10x/user/hari)
 const checkScanLimit = async (userId) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -325,6 +327,7 @@ const checkScanLimit = async (userId) => {
     return { allowed: true, remaining: MAX_DAILY_SCANS - user.scanCount, scanCount: user.scanCount };
 };
 
+// baru dihitung kalo beneran sukses scan
 const incrementScanCount = async (userId, currentScanCount) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -336,6 +339,7 @@ const incrementScanCount = async (userId, currentScanCount) => {
     });
 };
 
+// compress biar ga gede2 amat dikirim ke ai
 const compressImage = async (buffer) => {
     try {
         const compressed = await sharp(buffer)
@@ -365,7 +369,7 @@ const postToAi = async (url, formData) => {
     return response.data;
 };
 
-// Keep AI services warm (prevents cold start)
+// ping tiap 14 menit biar railway ga tidur
 const warmAiServices = async () => {
     try {
         await axios.get(`${AI_BASE_URL}/predict/blur`, { signal: AbortSignal.timeout(10000) });
@@ -379,7 +383,7 @@ setInterval(warmAiServices, 14 * 60 * 1000);
 // Warm on startup
 setTimeout(warmAiServices, 5000);
 
-// SCAN RECEIPT
+// scan struk -> blur check -> ocr extract
 exports.scanReceipt = asyncHandler(async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: 'No receipt image uploaded.' });
@@ -392,6 +396,7 @@ exports.scanReceipt = asyncHandler(async (req, res) => {
 
     const compressed = await compressImage(req.file.buffer);
 
+    // cek blur dulu
     let isBlurry = false;
     try {
         const blurData = await postToAi(`${AI_BASE_URL}/predict/blur`, createAiFormData(req.file, compressed));
@@ -411,6 +416,7 @@ exports.scanReceipt = asyncHandler(async (req, res) => {
         });
     }
 
+    // kalo lolos blur check, baru extract text
     let extractData;
     try {
         extractData = await postToAi(`${RECEIPT_SCANNER_URL}/extract-text`, createAiFormData(req.file, compressed));
@@ -425,6 +431,7 @@ exports.scanReceipt = asyncHandler(async (req, res) => {
         });
     }
 
+    // normalize response dari ai (format bisa beda2)
     extractData = extractData || {};
     const rawItems = Array.isArray(extractData.items) ? extractData.items : Array.isArray(extractData.result) ? extractData.result : [];
     const items = rawItems.map((item) => ({
@@ -434,6 +441,7 @@ exports.scanReceipt = asyncHandler(async (req, res) => {
         raw: item,
     }));
 
+    // baru diitung sebagai pemakaian quota kalo sukses
     await incrementScanCount(req.user.id, limit.scanCount);
 
     res.json({ items, raw: extractData, remaining: limit.remaining - 1 });
