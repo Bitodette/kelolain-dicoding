@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE } from '../utils/api';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,8 +40,7 @@ export default function Login({ onLogin }) {
     <div className="min-h-screen flex items-center justify-center bg-[#F7F8FB] px-4 py-12">
       <div className="w-full max-w-md bg-white rounded-xl border border-gray-200 shadow-sm p-8">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-[#23262F]">Masuk ke Kelola.in</h1>
-          <p className="mt-2 text-sm text-[#6B7280]">Silakan masuk untuk melanjutkan manajemen toko Anda.</p>
+          <h1 className="text-3xl font-bold text-[#23262F]">Login</h1>
         </div>
 
         {error && (
@@ -55,7 +56,7 @@ export default function Login({ onLogin }) {
               value={username}
               onChange={(event) => setUsername(event.target.value)}
               className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-[#111827] outline-none transition-shadow focus:border-[#2936C4] focus:shadow-sm"
-              placeholder="admin"
+              placeholder="username"
               autoComplete="username"
               spellCheck="false"
             />
@@ -63,14 +64,23 @@ export default function Login({ onLogin }) {
 
           <label className="block">
             <span className="text-sm font-medium text-[#4B5563]">Password</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-[#111827] outline-none transition-shadow focus:border-[#2936C4] focus:shadow-sm"
-              placeholder="••••••••"
-              autoComplete="current-password"
-            />
+            <div className="relative mt-2">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 pr-11 text-sm text-[#111827] outline-none transition-shadow focus:border-[#2936C4] focus:shadow-sm"
+                placeholder="••••••••"
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8B95A7] hover:text-[#23262F]"
+              >
+                {showPassword ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+              </button>
+            </div>
           </label>
 
           <label className="flex items-center gap-2 text-sm text-[#4B5563]">

@@ -223,9 +223,6 @@ export default function Dashboard() {
                             <p className="text-base font-semibold text-[#23262F]">Tren Pendapatan</p>
                             <p className="text-xs text-[#6B7280] mt-1">Omzet vs Keuntungan berdasarkan filter</p>
                         </div>
-                        <div className="flex flex-col sm:flex-row items-center gap-2">
-                            <span className="flex items-center gap-2 text-[10px] text-[#6B7280]"><span className="w-3 h-0.5 bg-[#6554D8] rounded-sm block" />Aktual</span>
-                        </div>
                     </div>
 
                     <div className="mb-2 flex items-center justify-between text-xs text-gray-500 md:hidden">
