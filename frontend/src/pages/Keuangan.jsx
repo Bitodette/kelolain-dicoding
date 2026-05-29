@@ -386,7 +386,7 @@ export default function Keuangan() {
     const cleanProfitTextClass = ( keuntunganBersih < 0 ? 
         "mt-1 text-2xl font-bold text-red-600" :
         "mt-1 text-2xl font-bold text-emerald-600"
-    )
+    );
 
     return (
         <div className="flex flex-col gap-4 relative">
