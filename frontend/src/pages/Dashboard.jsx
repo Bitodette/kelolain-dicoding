@@ -271,7 +271,7 @@ export default function Dashboard() {
                             <p className="text-base font-semibold text-[#23262F]">Stok Menipis</p>
                             <p className="text-xs text-[#6B7280] mt-1">Barang yang perlu dicek ulang</p>
                         </div>
-                        <p className="text-xs font-medium bg-[#EEF2FF] text-[#2936C4] px-2 py-1 rounded-md whitespace-nowrap">AI Analisis</p>
+                        <p className="text-xs font-medium bg-[#EEF2FF] text-[#2936C4] px-2 py-1 rounded-md whitespace-nowrap">Analisis AI</p>
                     </div>
 
                     <div className="flex-1 overflow-y-auto w-full">
