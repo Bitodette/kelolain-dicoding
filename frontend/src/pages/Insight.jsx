@@ -97,7 +97,7 @@ export default function Insight() {
     return (
         <div className="flex flex-col gap-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-                <div className="p-5 border-2 border-emerald-100 rounded-xl bg-emerald-50/50 flex flex-col justify-between transition-all hover:shadow-sm">
+                <div className="p-5 border-2 border-emerald-100 rounded-xl bg-emerald-50/50 flex flex-col transition-all hover:shadow-sm">
                     <div className="flex justify-between items-start mb-4">
                         <div className="p-2 bg-emerald-100 rounded-lg">
                             <ArrowTrendingUpIcon className="h-6 w-6 text-emerald-600" />
@@ -117,7 +117,7 @@ export default function Insight() {
                     </div>
                 </div>
 
-                <div className="p-5 border-2 border-indigo-100 rounded-xl bg-indigo-50/50 flex flex-col justify-between transition-all hover:shadow-sm">
+                <div className="p-5 border-2 border-indigo-100 rounded-xl bg-indigo-50/50 flex flex-col transition-all hover:shadow-sm">
                     <div className="flex justify-between items-start mb-4">
                         <div className="p-2 bg-indigo-100 rounded-lg">
                             <ShoppingBagIcon className="h-6 w-6 text-[#2936C4]" />
@@ -135,7 +135,7 @@ export default function Insight() {
                     </div>
                 </div>
 
-                <div className="p-5 border-2 border-amber-100 rounded-xl bg-amber-50/50 flex flex-col justify-between transition-all hover:shadow-sm">
+                <div className="p-5 border-2 border-amber-100 rounded-xl bg-amber-50/50 flex flex-col transition-all hover:shadow-sm">
                     <div className="flex justify-between items-start mb-4">
                         <div className="p-2 bg-amber-100 rounded-lg">
                             <ExclamationTriangleIcon className="h-6 w-6 text-amber-600" />
