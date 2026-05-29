@@ -327,6 +327,7 @@ const checkScanLimit = async (userId) => {
 };
 
 const AI_REQUEST_TIMEOUT = 60000;
+const AI_RETRY_TIMEOUT = 120000;
 
 const createAiFormData = (file) => {
     const fd = new FormData();
@@ -337,13 +338,35 @@ const createAiFormData = (file) => {
     return fd;
 };
 
-const postToAi = async (url, formData, timeout = AI_REQUEST_TIMEOUT) => {
-    const response = await axios.post(url, formData, {
-        headers: { ...formData.getHeaders() },
-        timeout,
-    });
-    return response.data;
+const postToAi = async (url, formData, timeout = AI_REQUEST_TIMEOUT, retries = 0) => {
+    try {
+        const response = await axios.post(url, formData, {
+            headers: { ...formData.getHeaders() },
+            timeout,
+        });
+        return response.data;
+    } catch (err) {
+        if (retries < 1 && (err.code === 'ECONNRESET' || err.code === 'ECONNREFUSED' || err.message?.includes('timeout') || err.message?.includes('socket'))) {
+            console.error(`AI retry (${url}): ${err.message}`);
+            return postToAi(url, formData, AI_RETRY_TIMEOUT, retries + 1);
+        }
+        throw err;
+    }
 };
+
+// Keep AI services warm (prevents cold start)
+const warmAiServices = async () => {
+    try {
+        await axios.get(`${AI_BASE_URL}/predict/blur`, { signal: AbortSignal.timeout(10000) });
+    } catch { /* ignore */ }
+    try {
+        await axios.get(`${RECEIPT_SCANNER_URL}/extract-text`, { signal: AbortSignal.timeout(10000) });
+    } catch { /* ignore */ }
+};
+// Ping every 14 minutes (Render free tier sleeps after 15 min idle)
+setInterval(warmAiServices, 14 * 60 * 1000);
+// Warm on startup
+setTimeout(warmAiServices, 5000);
 
 // SCAN RECEIPT
 exports.scanReceipt = asyncHandler(async (req, res) => {
@@ -386,6 +409,9 @@ exports.scanReceipt = asyncHandler(async (req, res) => {
         extractData = await postToAi(`${RECEIPT_SCANNER_URL}/extract-text`, createAiFormData(req.file));
     } catch (err) {
         console.error('Receipt scanner AI service error:', err.message);
+        if (err.response) {
+            console.error('Scanner response status:', err.response.status, 'data:', JSON.stringify(err.response.data));
+        }
         if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.message?.includes('timeout')) {
             return res.status(503).json({
                 message: 'Layanan pemindai struk tidak tersedia. Silakan coba lagi nanti.',
