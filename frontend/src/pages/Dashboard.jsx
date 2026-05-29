@@ -198,7 +198,7 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
                     <div className="p-5 border-2 border-[#E6E8EC] rounded-xl bg-white transition-all">
                         <p className="text-sm font-medium text-[#6B7280]">Total Penjualan</p>
-                        <p className="mt-2 text-3xl font-bold text-[#23262F]">Rp {totalOmzet.toLocaleString("id-ID")}</p>
+                        <p className="mt-2 text-2xl font-bold text-[#23262F]">Rp {totalOmzet.toLocaleString("id-ID")}</p>
                     </div>
 
                     <div className="p-5 border-2 border-[#E6E8EC] rounded-xl bg-white transition-all">
@@ -208,7 +208,7 @@ export default function Dashboard() {
                     
                     <div className="p-5 border-2 border-[#E6E8EC] rounded-xl bg-white transition-all">
                         <p className="text-sm font-medium text-[#6B7280]">Total Transaksi</p>
-                        <p className="mt-2 text-3xl font-bold text-[#23262F]">{totalTransaksi.toLocaleString("id-ID")}</p>
+                        <p className="mt-2 text-2xl font-bold text-[#23262F]">{totalTransaksi.toLocaleString("id-ID")}</p>
                     </div>
                 </div>
             </div>
