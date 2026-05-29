@@ -474,7 +474,10 @@ export default function Keuangan() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 items-stretch">
                 <div className="lg:col-span-2 p-4 border-2 border-[#E6E8EC] rounded-xl bg-white flex flex-col">
                     <div className="flex items-center justify-between mb-4">
-                        <p className="text-sm font-semibold text-[#23262F]">Tren Keuangan & Prediksi</p>
+                        <p className="text-sm font-semibold text-[#23262F]">Tren Pemasukan & Pengeluaran</p>
+                        <div className="flex items-center gap-2">
+                            <span className="flex items-center gap-1 text-[10px] text-[#6B7280]"><div className="w-2 h-0.5 bg-[#2936C4]"></div> Aktual</span>
+                        </div>
                     </div>
                     <div className="h-72 w-full">
                         {isFinanceLoading ? (
