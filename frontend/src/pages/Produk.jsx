@@ -129,11 +129,7 @@ export default function Produk() {
         formData.append('receipt', file);
 
         try {
-            const response = await axios.post(`${API_BASE}/api/ai/ocr/scan`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
+            const response = await axios.post(`${API_BASE}/api/ai/ocr/scan`, formData);
 
             const items = normalizeOcrItems(response.data || {});
 

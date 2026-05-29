@@ -326,6 +326,25 @@ const checkScanLimit = async (userId) => {
     return { allowed: true, remaining: MAX_DAILY_SCANS - user.scanCount - 1 };
 };
 
+const AI_REQUEST_TIMEOUT = 60000;
+
+const createAiFormData = (file) => {
+    const fd = new FormData();
+    fd.append('file', file.buffer, {
+        filename: file.originalname,
+        contentType: file.mimetype,
+    });
+    return fd;
+};
+
+const postToAi = async (url, formData, timeout = AI_REQUEST_TIMEOUT) => {
+    const response = await axios.post(url, formData, {
+        headers: { ...formData.getHeaders() },
+        timeout,
+    });
+    return response.data;
+};
+
 // SCAN RECEIPT
 exports.scanReceipt = asyncHandler(async (req, res) => {
     if (!req.file) {
@@ -337,19 +356,23 @@ exports.scanReceipt = asyncHandler(async (req, res) => {
         return res.status(429).json({ message: 'Anda telah mencapai batas maksimal 10 scan struk per hari.' });
     }
 
-    const blurFormData = new FormData();
-    blurFormData.append('file', req.file.buffer, {
-        filename: req.file.originalname,
-        contentType: req.file.mimetype,
-    });
-
-    const blurResponse = await axios.post(`${AI_BASE_URL}/predict/blur`, blurFormData, {
-        headers: {
-            ...blurFormData.getHeaders(),
-        },
-    });
-
-    const isBlurry = blurResponse.data?.prediction === 'blurry';
+    let isBlurry = false;
+    try {
+        const blurData = await postToAi(`${AI_BASE_URL}/predict/blur`, createAiFormData(req.file));
+        isBlurry = blurData?.prediction === 'blurry';
+    } catch (err) {
+        console.error('Blur check AI service error:', err.message);
+        if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.message?.includes('timeout')) {
+            return res.status(503).json({
+                message: 'Layanan AI tidak tersedia. Silakan coba lagi nanti.',
+                error: 'ai_service_unavailable',
+            });
+        }
+        return res.status(502).json({
+            message: 'Gagal memeriksa kualitas gambar. Silakan coba lagi.',
+            error: 'blur_check_failed',
+        });
+    }
 
     if (isBlurry) {
         return res.status(422).json({
@@ -358,19 +381,24 @@ exports.scanReceipt = asyncHandler(async (req, res) => {
         });
     }
 
-    const extractFormData = new FormData();
-    extractFormData.append('file', req.file.buffer, {
-        filename: req.file.originalname,
-        contentType: req.file.mimetype,
-    });
+    let extractData;
+    try {
+        extractData = await postToAi(`${RECEIPT_SCANNER_URL}/extract-text`, createAiFormData(req.file));
+    } catch (err) {
+        console.error('Receipt scanner AI service error:', err.message);
+        if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.message?.includes('timeout')) {
+            return res.status(503).json({
+                message: 'Layanan pemindai struk tidak tersedia. Silakan coba lagi nanti.',
+                error: 'scanner_service_unavailable',
+            });
+        }
+        return res.status(502).json({
+            message: 'Gagal memindai struk. Silakan coba lagi.',
+            error: 'scan_failed',
+        });
+    }
 
-    const extractResponse = await axios.post(`${RECEIPT_SCANNER_URL}/extract-text`, extractFormData, {
-        headers: {
-            ...extractFormData.getHeaders(),
-        },
-    });
-
-    const extractData = extractResponse.data || {};
+    extractData = extractData || {};
     const rawItems = Array.isArray(extractData.items) ? extractData.items : Array.isArray(extractData.result) ? extractData.result : [];
     const items = rawItems.map((item) => ({
         name: item.name || item.item_name || item.product_name || item.description || '',
@@ -387,17 +415,11 @@ exports.checkReceiptBlur = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: 'No receipt image uploaded.' });
     }
 
-    const blurFormData = new FormData();
-    blurFormData.append('file', req.file.buffer, {
-        filename: req.file.originalname,
-        contentType: req.file.mimetype,
-    });
-
-    const blurResponse = await axios.post(`${AI_BASE_URL}/predict/blur`, blurFormData, {
-        headers: {
-            ...blurFormData.getHeaders(),
-        },
-    });
-
-    res.json({ prediction: blurResponse.data?.prediction || 'unknown' });
+    try {
+        const data = await postToAi(`${AI_BASE_URL}/predict/blur`, createAiFormData(req.file));
+        res.json({ prediction: data?.prediction || 'unknown' });
+    } catch (err) {
+        console.error('Blur check AI service error:', err.message);
+        res.status(502).json({ prediction: 'unknown', error: 'blur_check_failed', message: 'Gagal memeriksa kualitas gambar.' });
+    }
 });
