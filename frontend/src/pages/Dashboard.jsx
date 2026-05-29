@@ -151,6 +151,11 @@ export default function Dashboard() {
         return name;
     };
 
+    const cleanProfitTextClass = ( totalUntung < 0 ? 
+        "mt-1 text-2xl font-bold text-red-600" :
+        "mt-1 text-2xl font-bold text-emerald-600"
+    );
+
     return (
         <div className="flex flex-col gap-3 sm:gap-4">
             
@@ -198,7 +203,7 @@ export default function Dashboard() {
 
                     <div className="p-5 border-2 border-[#E6E8EC] rounded-xl bg-white transition-all">
                         <p className="text-sm font-medium text-[#6B7280]">Keuntungan Bersih</p>
-                        <p className="mt-2 text-3xl font-bold text-emerald-600">Rp {totalUntung.toLocaleString("id-ID")}</p>
+                        <p className={cleanProfitTextClass}>Rp {totalUntung.toLocaleString("id-ID")}</p>
                     </div>
                     
                     <div className="p-5 border-2 border-[#E6E8EC] rounded-xl bg-white transition-all">
