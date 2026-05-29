@@ -109,7 +109,7 @@ export default function Insight() {
                             {loading.revenue
                                 ? 'Memuat prediksi...'
                                 : !hasRevenueForecastData
-                                    ? 'Perlu minimal 3 hari data untuk menampilkan prediksi revenue.'
+                                    ? 'Perlu minimal data 3 hari untuk menampilkan prediksi revenue.'
                                     : lastRevenue !== null
                                         ? `Estimasi akhir 7 hari: ${formatCurrency(lastRevenue)}.`
                                         : 'Belum ada data prediksi revenue tersedia.'}
