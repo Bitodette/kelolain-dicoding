@@ -383,6 +383,11 @@ export default function Keuangan() {
         return t === "masuk" || t === "pemasukan" || t === "income";
     };
 
+    const cleanProfitTextClass = ( keuntunganBersih < 0 ? 
+        "mt-1 text-2xl font-bold text-red-600" :
+        "mt-1 text-2xl font-bold text-emerald-600"
+    )
+
     return (
         <div className="flex flex-col gap-4 relative">
             
@@ -448,7 +453,7 @@ export default function Keuangan() {
                 </div>
                 <div className="p-4 border-2 border-[#E6E8EC] rounded-xl bg-white">
                     <p className="text-xs font-medium text-[#6B7280]">Keuntungan Bersih</p>
-                    <p className="mt-1 text-2xl font-bold text-emerald-600">Rp {keuntunganBersih.toLocaleString("id-ID")}</p>
+                    <p className={cleanProfitTextClass}>Rp {keuntunganBersih.toLocaleString("id-ID")}</p>
                 </div>
                 
                 <div className="relative overflow-hidden p-4 border-2 border-[#E6E8EC] rounded-xl bg-gradient-to-br from-[#EEF2FF] to-white flex flex-col justify-center">
