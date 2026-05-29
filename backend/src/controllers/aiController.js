@@ -110,7 +110,7 @@ const buildBundlingFallback = (bundlingData) => {
 };
 
 const safeAiRequest = async (url, payload) => {
-    const aiResponse = await axios.post(url, payload);
+    const aiResponse = await axios.post(url, payload, { timeout: 15000 });
     if (!aiResponse?.data || typeof aiResponse.data !== 'object') {
         throw new Error('Invalid AI response');
     }
@@ -123,26 +123,24 @@ exports.getRevenuePrediction = asyncHandler(async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    for (let i = 0; i < 3; i++) {
+    const dayQueries = [0, 1, 2].map((i) => {
         const targetDate = new Date(today);
         targetDate.setDate(today.getDate() - (2 - i));
-        
         const nextDate = new Date(targetDate);
         nextDate.setDate(targetDate.getDate() + 1);
 
-        const result = await prisma.transactions.aggregate({
+        return prisma.transactions.aggregate({
             _sum: { amount: true },
             where: {
                 organizationId: req.user.organizationId,
                 type: 'Masuk',
-                createdAt: {
-                    gte: targetDate,
-                    lt: nextDate
-                }
+                createdAt: { gte: targetDate, lt: nextDate }
             }
         });
-        revenueData[i] = result._sum.amount || 0;
-    }
+    });
+
+    const results = await Promise.all(dayQueries);
+    results.forEach((result, i) => { revenueData[i] = result._sum.amount || 0; });
 
     const payload = { data: revenueData };
     const cacheKey = stableStringify(payload);
@@ -259,8 +257,17 @@ exports.getDemandPrediction = asyncHandler(async (req, res) => {
 
 // rekomendasi bundling
 exports.getBundlingSuggestion = asyncHandler(async (req, res) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const threeDaysAgo = new Date(today);
+    threeDaysAgo.setDate(today.getDate() - 2);
+
     const transactions = await prisma.transactions.findMany({
-        where: { organizationId: req.user.organizationId, type: 'Masuk' },
+        where: {
+            organizationId: req.user.organizationId,
+            type: 'Masuk',
+            createdAt: { gte: threeDaysAgo }
+        },
         orderBy: { createdAt: 'desc' },
         take: 100 
     });

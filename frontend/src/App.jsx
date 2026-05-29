@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
@@ -36,12 +35,6 @@ function App() {
   const activeTab = getActiveTab(location.pathname);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [insightCache, setInsightCache] = useState({
-    revenueForecast: [],
-    demandTop5: [],
-    bundlingSuggestions: [],
-    fetchedAt: null,
-  });
   const [auth, setAuth] = useState(() => getStoredAuth());
   const [authLoaded, setAuthLoaded] = useState(false);
   const allowedPages = auth?.user?.allowedPages || [];
@@ -83,52 +76,8 @@ function App() {
     initAuth();
   }, []);
 
-  const fetchAndCacheInsightData = async () => {
-    try {
-      const [revenueRes, demandRes, bundlingRes] = await Promise.all([
-        axios.get(`${API_BASE}/api/ai/revenue`),
-        axios.get(`${API_BASE}/api/ai/demand`),
-        axios.get(`${API_BASE}/api/ai/bundling`),
-      ]);
-
-      setInsightCache({
-        revenueForecast: Array.isArray(revenueRes.data?.result) ? revenueRes.data.result : [],
-        demandTop5: Array.isArray(demandRes.data?.result) ? demandRes.data.result : [],
-        bundlingSuggestions: Array.isArray(bundlingRes.data?.result) ? bundlingRes.data.result : [],
-        fetchedAt: Date.now(),
-      });
-
-      return true;
-    } catch (err) {
-      console.error('Failed to cache insight data:', err);
-      return false;
-    }
-  };
-
-  // prefetch insight data pas user browsing, cache 10 menit
   useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
-
-    const insightCacheStale = !insightCache.fetchedAt || Date.now() - insightCache.fetchedAt > 10 * 60 * 1000;
-    if (!insightCacheStale) {
-      return;
-    }
-
-    const timer = window.setTimeout(async () => {
-      const cached = await fetchAndCacheInsightData();
-      if (cached) {
-        setNotifications((current) =>
-          current.some((notif) => notif.id === 'insight-ready')
-            ? current
-            : [
-                ...current,
-                { id: 'insight-ready', text: 'Insight sudah tersedia' },
-              ]
-        );
-      }
-    }, 1800);
+    if (!isAuthenticated) return;
 
     const lowStockTimer = window.setTimeout(() => {
       setNotifications((current) =>
@@ -142,10 +91,9 @@ function App() {
     }, 4200);
 
     return () => {
-      window.clearTimeout(timer);
       window.clearTimeout(lowStockTimer);
     };
-  }, [isAuthenticated, location.pathname, insightCache.fetchedAt]);
+  }, [isAuthenticated]);
 
   const handleLogin = (authData) => {
     setStoredAuth(authData);
@@ -224,7 +172,7 @@ function App() {
               path="/insight"
               element={
                 <ProtectedRoute isAuthenticated={isAuthenticated} allowedPages={allowedPages} requiredPage="insight">
-                  <Insight initialData={insightCache} />
+                    <Insight />
                 </ProtectedRoute>
               }
             />

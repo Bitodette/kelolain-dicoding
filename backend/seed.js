@@ -168,18 +168,16 @@ const transactions = [
   },
 ];
 
-const DEFAULT_ADMIN_ORG_NAME = 'Kelola.in Admin';
-
 async function main() {
   console.log('Seeding dummy data...');
 
-  const organization = await prisma.organization.upsert({
-    where: { name: DEFAULT_ADMIN_ORG_NAME },
-    update: {},
-    create: { name: DEFAULT_ADMIN_ORG_NAME },
-  });
+  const user = await prisma.user.findUnique({ where: { username: 'faried' } });
+  if (!user) {
+    console.error('User "faried" tidak ditemukan. Daftarkan akun faried dulu.');
+    process.exit(1);
+  }
 
-  const orgId = organization.id;
+  const orgId = user.organizationId;
 
   const categoryRecords = {};
   for (const category of categories) {

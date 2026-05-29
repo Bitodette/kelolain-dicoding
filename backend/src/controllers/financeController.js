@@ -62,12 +62,6 @@ exports.getFinanceOverview = asyncHandler(async (req, res) => {
         const ty = normalizeType(t.type);
         return ty === 'masuk' || ty === 'pemasukan' || ty === 'income';
     };
-    const isRestock = (t) => {
-        const cat = String(t.category || '').toLowerCase();
-        const label = String(t.label || '').toLowerCase();
-        return cat.includes('restock') || label.includes('restock');
-    };
-
     // hitung cogs kalo transaksi lama belum punya data hpp
     const needCogsTx = tx.filter((t) => isIncome(t) && (Number(t.cogs) || 0) <= 0);
     const productIdsNeeded = new Set();
@@ -104,9 +98,7 @@ exports.getFinanceOverview = asyncHandler(async (req, res) => {
         }
         if (ty === 'keluar' || ty === 'pengeluaran' || ty === 'expense') {
             pengeluaran += amt;
-            if (!isRestock(t)) {
-                keuntunganBersih -= amt;
-            }
+            keuntunganBersih -= amt;
         }
     }
 
@@ -123,12 +115,9 @@ exports.getFinanceOverview = asyncHandler(async (req, res) => {
     for (const t of last7) {
         const amt = Number(t.amount) || 0;
         const ty = String(t.type || '').toLowerCase().trim();
-        const cat = String(t.category || '').toLowerCase();
-        const label = String(t.label || '').toLowerCase();
-        const isRestock = cat.includes('restock') || label.includes('restock');
         if (ty === 'masuk' || ty === 'pemasukan' || ty === 'income') net7 += amt;
         if (ty === 'keluar' || ty === 'pengeluaran' || ty === 'expense') {
-            if (!isRestock) net7 -= amt;
+            net7 -= amt;
         }
     }
     const projection7d = last7.length >= 2 ? Math.round(net7) : null;

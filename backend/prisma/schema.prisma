@@ -114,5 +114,6 @@ model transactions {
   time      String?  @db.VarChar(50)
   items     Json?
 
+  @@index([organizationId, type, createdAt])
   @@map("transactions")
 }
