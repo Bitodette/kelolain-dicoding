@@ -133,10 +133,6 @@ export default function Keuangan() {
 
             // Auto-pick: kalau user belum pilih manual, pilih periode dengan data paling banyak
             if (!hasUserPickedPeriod && data?.availability) {
-                const trend = Array.isArray(data.trend) ? data.trend : [];
-                const nonEmptyBuckets = trend.filter((x) => (x.pemasukan || 0) > 0 || (x.pengeluaran || 0) > 0);
-                const isInsufficient = nonEmptyBuckets.length < 2;
-
                 const counts = {
                     week: data.availability.week?.count || 0,
                     month: data.availability.month?.count || 0,
@@ -152,7 +148,7 @@ export default function Keuangan() {
                     })[0]?.[0];
 
                 const bestLabel = best ? apiToPeriod[best] : null;
-                if (bestLabel && (isInsufficient || (counts[data.effectivePeriod] || 0) === 0) && bestLabel !== selectedPeriod) {
+                if (bestLabel && (counts[data.effectivePeriod] || 0) === 0 && bestLabel !== selectedPeriod) {
                     setSelectedPeriod(bestLabel);
                 }
             }
@@ -356,15 +352,12 @@ export default function Keuangan() {
     const currentExpenseBreakdown = useMemo(() => expenseBreakdown, [expenseBreakdown]);
 
     const hasTrendData = useMemo(() => {
-        if (!Array.isArray(financeTrendData) || financeTrendData.length === 0) return false;
-        return financeTrendData.some((x) => (x.pemasukan || 0) > 0 || (x.pengeluaran || 0) > 0);
+        return Array.isArray(financeTrendData) && financeTrendData.length > 0;
     }, [financeTrendData]);
 
     const isTrendInsufficient = useMemo(() => {
-        if (!Array.isArray(financeTrendData)) return true;
-        const nonEmptyBuckets = financeTrendData.filter((x) => (x.pemasukan || 0) > 0 || (x.pengeluaran || 0) > 0);
-        return nonEmptyBuckets.length < 2;
-    }, [financeTrendData]);
+        return false;
+    }, []);
 
     const formatYAxis = (value) => {
         if (value >= 1000000) return `${(value / 1000000).toLocaleString("id-ID", { maximumFractionDigits: 1 })}jt`;

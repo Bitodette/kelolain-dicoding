@@ -15,17 +15,9 @@ function buildTrend({ period, start, end, transactions }) {
         return acc;
     };
 
-    const getCogs = (t) => {
-        const direct = Number(t?.cogs);
-        if (Number.isFinite(direct) && direct > 0) return direct;
-        const computed = t?.__computedCogs;
-        const computedNum = Number(computed);
-        return Number.isFinite(computedNum) ? computedNum : 0;
-    };
-
     const getProfitDelta = (t) => {
         const amt = Number(t?.amount) || 0;
-        if (isIncome(t)) return amt - getCogs(t);
+        if (isIncome(t)) return amt;
         if (isExpense(t)) return -amt;
         return 0;
     };
