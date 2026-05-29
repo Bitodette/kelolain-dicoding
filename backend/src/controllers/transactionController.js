@@ -74,29 +74,30 @@ async function computeFifoCogsAndUpdateBatches(cart, orgId) {
         soldByProduct.set(line.productId, (soldByProduct.get(line.productId) || 0) + line.qty);
     }
 
-    for (const update of batchUpdates) {
-        await prisma.productBatch.update({
-            where: { id: update.id },
-            data: { currentQty: update.currentQty },
-        });
-    }
-
-    const productIdsToUpdate = Array.from(soldByProduct.entries());
-    if (productIdsToUpdate.length > 0) {
-        const products = await prisma.product.findMany({
-            where: { id: { in: productIdsToUpdate.map(([id]) => id) }, organizationId: orgId },
-            select: { id: true, stock: true },
-        });
-        const updatePromises = products.map((product) => {
-            const soldQty = soldByProduct.get(product.id) || 0;
-            const newStock = Math.max(0, Number(product.stock || 0) - soldQty);
-            return prisma.product.update({
-                where: { id: product.id },
-                data: { stock: newStock, status: getStatusFromStock(newStock) },
+    await prisma.$transaction(async (tx) => {
+        for (const update of batchUpdates) {
+            await tx.productBatch.update({
+                where: { id: update.id },
+                data: { currentQty: update.currentQty },
             });
-        });
-        await Promise.all(updatePromises);
-    }
+        }
+
+        const productIdsToUpdate = Array.from(soldByProduct.entries());
+        if (productIdsToUpdate.length > 0) {
+            const products = await tx.product.findMany({
+                where: { id: { in: productIdsToUpdate.map(([id]) => id) }, organizationId: orgId },
+                select: { id: true, stock: true },
+            });
+            for (const product of products) {
+                const soldQty = soldByProduct.get(product.id) || 0;
+                const newStock = Math.max(0, Number(product.stock || 0) - soldQty);
+                await tx.product.update({
+                    where: { id: product.id },
+                    data: { stock: newStock, status: getStatusFromStock(newStock) },
+                });
+            }
+        }
+    });
 
     return cogs;
 }

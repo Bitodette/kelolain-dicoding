@@ -106,13 +106,10 @@ exports.updateProduct = asyncHandler(async (req, res) => {
         };
     }
 
-    const updateResult = await prisma.product.updateMany({
-        where: { id, organizationId: orgId },
+    const product = await prisma.product.update({
+        where: { id },
         data: updateData,
     });
-    if (updateResult.count === 0) return res.status(404).json({ error: 'Produk tidak ditemukan' });
-
-    const product = await prisma.product.findFirst({ where: { id, organizationId: orgId } });
     res.json(product);
 });
 
