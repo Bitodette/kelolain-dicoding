@@ -237,7 +237,7 @@ export default function Insight() {
                     <div className="flex items-center justify-between gap-4 mb-4">
                         <div>
                             <p className="text-base font-semibold text-[#23262F]">Rekomendasi Bundling</p>
-                            <p className="text-xs text-[#6B7280] mt-1">Hasil analisis frequent itemset dari AI.</p>
+                            <p className="text-xs text-[#6B7280] mt-1">Hasil perhitungan skor frekuensi kombinasi produk.</p>
                         </div>
                     </div>
 
