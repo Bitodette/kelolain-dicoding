@@ -39,7 +39,7 @@ export default function Navbar({ activeTab, setMobileOpen, onLogout, notificatio
                 {/* mobile menu button - left */}
                 <button
                     onClick={() => setMobileOpen && setMobileOpen(true)}
-                    className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:bg-gray-100"
+                    className="lg:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:bg-gray-100"
                     aria-label="Open menu"
                 >
                     <Bars3Icon className="w-6 h-6" />

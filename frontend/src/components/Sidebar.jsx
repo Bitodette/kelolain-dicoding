@@ -76,7 +76,7 @@ export default function Sidebar({ activeTab, mobileOpen, setMobileOpen, allowedP
   const baseWidth = collapsed ? "w-[88px]" : "w-64";
 
   return (
-    <div className={`bg-[#F9F9F9] h-screen md:h-screen border-r border-gray-100 flex flex-col transition-transform duration-300 ${baseWidth} transform ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:sticky md:top-0 md:self-start md:shrink-0 md:flex z-50 overflow-y-auto`}>
+    <div className={`bg-[#F9F9F9] h-screen border-r border-gray-100 flex flex-col transition-transform duration-300 ${baseWidth} transform ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:sticky lg:top-0 lg:self-start lg:shrink-0 lg:flex z-50 overflow-y-auto`}>
       {/* logo */}
       <div className="relative flex items-center justify-center py-9">
         <div className={logoWrapperClass}>
@@ -89,7 +89,7 @@ export default function Sidebar({ activeTab, mobileOpen, setMobileOpen, allowedP
         </div>
       
         {/* close button on mobile */}
-        <button onClick={() => setMobileOpen(false)} className="pr-4 md:hidden">
+        <button onClick={() => setMobileOpen(false)} className="pr-4 lg:hidden">
           <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
