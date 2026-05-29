@@ -173,7 +173,7 @@ export default function Insight() {
                     ) : error ? (
                         <div className="h-full w-full flex items-center justify-center text-sm text-[#E02D3C]">{error}</div>
                     ) : !hasRevenueForecastData ? (
-                        <div className="h-full w-full flex items-center justify-center text-sm text-[#8B95A7]">Perlu minimal 3 hari data untuk menampilkan prediksi revenue.</div>
+                        <div className="h-full w-full flex items-center justify-center text-sm text-[#8B95A7]">Perlu minimal data 3 hari untuk menampilkan prediksi revenue.</div>
                     ) : (
                         <ResponsiveContainer width="100%" height={300} minWidth={0}>
                             <LineChart data={revenueChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
