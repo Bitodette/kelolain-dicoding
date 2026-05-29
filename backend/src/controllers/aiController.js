@@ -3,6 +3,7 @@ const path = require('path');
 const prisma = require('../config/db');
 const axios = require('axios');
 const FormData = require('form-data');
+const sharp = require('sharp');
 const { asyncHandler } = require('../middlewares/errorHandler');
 
 const AI_BASE_URL = process.env.AI_BASE_URL;
@@ -314,44 +315,54 @@ const checkScanLimit = async (userId) => {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { scanCount: true, scanDate: true } });
 
     if (!user.scanDate || new Date(user.scanDate).getTime() < today.getTime()) {
-        await prisma.user.update({ where: { id: userId }, data: { scanCount: 1, scanDate: today } });
-        return { allowed: true, remaining: MAX_DAILY_SCANS - 1 };
+        return { allowed: true, remaining: MAX_DAILY_SCANS, scanCount: 0 };
     }
 
     if (user.scanCount >= MAX_DAILY_SCANS) {
         return { allowed: false, remaining: 0 };
     }
 
-    await prisma.user.update({ where: { id: userId }, data: { scanCount: user.scanCount + 1 } });
-    return { allowed: true, remaining: MAX_DAILY_SCANS - user.scanCount - 1 };
+    return { allowed: true, remaining: MAX_DAILY_SCANS - user.scanCount, scanCount: user.scanCount };
 };
 
-const AI_REQUEST_TIMEOUT = 60000;
-const AI_RETRY_TIMEOUT = 120000;
+const incrementScanCount = async (userId, currentScanCount) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-const createAiFormData = (file) => {
-    const fd = new FormData();
-    fd.append('file', file.buffer, {
-        filename: file.originalname,
-        contentType: file.mimetype,
+    const nextCount = currentScanCount + 1;
+    await prisma.user.update({
+        where: { id: userId },
+        data: { scanCount: nextCount, scanDate: today },
     });
+};
+
+const compressImage = async (buffer) => {
+    try {
+        const compressed = await sharp(buffer)
+            .resize(1920, 1920, { fit: 'inside', withoutEnlargement: true })
+            .jpeg({ quality: 80 })
+            .toBuffer();
+        return { buffer: compressed, mimetype: 'image/jpeg', ext: '.jpg' };
+    } catch {
+        return { buffer, mimetype: null, ext: null };
+    }
+};
+
+const createAiFormData = (file, compressed) => {
+    const fd = new FormData();
+    const buf = compressed?.buffer || file.buffer;
+    const ext = compressed?.ext || '.jpg';
+    const mime = compressed?.mimetype || file.mimetype;
+    const name = file.originalname.replace(/\.[^.]+$/, '') + ext;
+    fd.append('file', buf, { filename: name, contentType: mime });
     return fd;
 };
 
-const postToAi = async (url, formData, timeout = AI_REQUEST_TIMEOUT, retries = 0) => {
-    try {
-        const response = await axios.post(url, formData, {
-            headers: { ...formData.getHeaders() },
-            timeout,
-        });
-        return response.data;
-    } catch (err) {
-        if (retries < 1 && (err.code === 'ECONNRESET' || err.code === 'ECONNREFUSED' || err.message?.includes('timeout') || err.message?.includes('socket'))) {
-            console.error(`AI retry (${url}): ${err.message}`);
-            return postToAi(url, formData, AI_RETRY_TIMEOUT, retries + 1);
-        }
-        throw err;
-    }
+const postToAi = async (url, formData) => {
+    const response = await axios.post(url, formData, {
+        headers: { ...formData.getHeaders() },
+    });
+    return response.data;
 };
 
 // Keep AI services warm (prevents cold start)
@@ -379,18 +390,14 @@ exports.scanReceipt = asyncHandler(async (req, res) => {
         return res.status(429).json({ message: 'Anda telah mencapai batas maksimal 10 scan struk per hari.' });
     }
 
+    const compressed = await compressImage(req.file.buffer);
+
     let isBlurry = false;
     try {
-        const blurData = await postToAi(`${AI_BASE_URL}/predict/blur`, createAiFormData(req.file));
+        const blurData = await postToAi(`${AI_BASE_URL}/predict/blur`, createAiFormData(req.file, compressed));
         isBlurry = blurData?.prediction === 'blurry';
     } catch (err) {
         console.error('Blur check AI service error:', err.message);
-        if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.message?.includes('timeout')) {
-            return res.status(503).json({
-                message: 'Layanan AI tidak tersedia. Silakan coba lagi nanti.',
-                error: 'ai_service_unavailable',
-            });
-        }
         return res.status(502).json({
             message: 'Gagal memeriksa kualitas gambar. Silakan coba lagi.',
             error: 'blur_check_failed',
@@ -406,17 +413,11 @@ exports.scanReceipt = asyncHandler(async (req, res) => {
 
     let extractData;
     try {
-        extractData = await postToAi(`${RECEIPT_SCANNER_URL}/extract-text`, createAiFormData(req.file));
+        extractData = await postToAi(`${RECEIPT_SCANNER_URL}/extract-text`, createAiFormData(req.file, compressed));
     } catch (err) {
         console.error('Receipt scanner AI service error:', err.message);
         if (err.response) {
             console.error('Scanner response status:', err.response.status, 'data:', JSON.stringify(err.response.data));
-        }
-        if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.message?.includes('timeout')) {
-            return res.status(503).json({
-                message: 'Layanan pemindai struk tidak tersedia. Silakan coba lagi nanti.',
-                error: 'scanner_service_unavailable',
-            });
         }
         return res.status(502).json({
             message: 'Gagal memindai struk. Silakan coba lagi.',
@@ -433,7 +434,9 @@ exports.scanReceipt = asyncHandler(async (req, res) => {
         raw: item,
     }));
 
-    res.json({ items, raw: extractData, remaining: limit.remaining });
+    await incrementScanCount(req.user.id, limit.scanCount);
+
+    res.json({ items, raw: extractData, remaining: limit.remaining - 1 });
 });
 
 exports.checkReceiptBlur = asyncHandler(async (req, res) => {
@@ -442,7 +445,8 @@ exports.checkReceiptBlur = asyncHandler(async (req, res) => {
     }
 
     try {
-        const data = await postToAi(`${AI_BASE_URL}/predict/blur`, createAiFormData(req.file));
+        const compressed = await compressImage(req.file.buffer);
+        const data = await postToAi(`${AI_BASE_URL}/predict/blur`, createAiFormData(req.file, compressed));
         res.json({ prediction: data?.prediction || 'unknown' });
     } catch (err) {
         console.error('Blur check AI service error:', err.message);
