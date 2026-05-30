@@ -111,6 +111,7 @@ const normalizeTypeWrite = (value) => {
 
 exports.getTransactions = asyncHandler(async (req, res) => {
     const { start, end, limit } = req.query;
+    const page = req.query.page ? Math.max(1, Number(req.query.page)) : null;
     const startDate = parseLocalDateOnly(start) || (start ? new Date(start) : null);
     const endDate = parseLocalDateOnly(end) || (end ? new Date(end) : null);
     const where = {};
@@ -120,6 +121,20 @@ exports.getTransactions = asyncHandler(async (req, res) => {
         if (endDate) where.createdAt.lte = endOfDay(endDate);
     }
     const take = limit ? Math.min(200, Math.max(1, Number(limit))) : undefined;
+
+    if (page) {
+        const pageLimit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+        const skip = (page - 1) * pageLimit;
+        const [transactions, total] = await Promise.all([
+            prisma.transactions.findMany({
+                where: { ...where, organizationId: req.user.organizationId },
+                orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+                skip, take: pageLimit,
+            }),
+            prisma.transactions.count({ where: { ...where, organizationId: req.user.organizationId } }),
+        ]);
+        return res.json({ data: transactions, total, page, totalPages: Math.ceil(total / pageLimit) });
+    }
 
     const transactions = await prisma.transactions.findMany({
         where: { ...where, organizationId: req.user.organizationId },

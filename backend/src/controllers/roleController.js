@@ -13,14 +13,16 @@ exports.getRoles = asyncHandler(async (req, res) => {
 
 exports.createRole = asyncHandler(async (req, res) => {
     const { name, pages } = req.body;
-    const trimmedName = String(name || '').trim();
-    if (!trimmedName) return res.status(400).json({ error: 'Nama role wajib diisi' });
+    const raw = String(name || '').trim();
+    if (!raw) return res.status(400).json({ error: 'Nama role wajib diisi' });
+
+    const normalized = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
 
     const orgId = req.user.organizationId;
-    const existing = await prisma.role.findFirst({ where: { organizationId: orgId, name: trimmedName } });
+    const existing = await prisma.role.findFirst({ where: { organizationId: orgId, name: { equals: normalized, mode: 'insensitive' } } });
     if (existing) return res.status(400).json({ error: 'Role sudah ada' });
 
-    const role = await prisma.role.create({ data: { name: trimmedName, pages: normalizePages(pages), organizationId: orgId } });
+    const role = await prisma.role.create({ data: { name: normalized, pages: normalizePages(pages), organizationId: orgId } });
     res.status(201).json(role);
 });
 
@@ -30,9 +32,9 @@ exports.updateRole = asyncHandler(async (req, res) => {
     const data = {};
 
     if (name !== undefined) {
-        const trimmedName = String(name || '').trim();
-        if (!trimmedName) return res.status(400).json({ error: 'Nama role wajib diisi' });
-        data.name = trimmedName;
+        const raw = String(name || '').trim();
+        if (!raw) return res.status(400).json({ error: 'Nama role wajib diisi' });
+        data.name = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
     }
 
     if (pages !== undefined) {

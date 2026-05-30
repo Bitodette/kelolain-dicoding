@@ -8,14 +8,16 @@ exports.getCategories = asyncHandler(async (req, res) => {
 
 exports.createCategory = asyncHandler(async (req, res) => {
     const { name } = req.body;
-    const trimmedName = String(name || '').trim();
-    if (!trimmedName) return res.status(400).json({ error: 'Nama kategori wajib diisi' });
+    const raw = String(name || '').trim();
+    if (!raw) return res.status(400).json({ error: 'Nama kategori wajib diisi' });
+
+    const normalized = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
 
     const orgId = req.user.organizationId;
-    const existing = await prisma.category.findFirst({ where: { organizationId: orgId, name: trimmedName } });
+    const existing = await prisma.category.findFirst({ where: { organizationId: orgId, name: { equals: normalized, mode: 'insensitive' } } });
     if (existing) return res.status(400).json({ error: 'Kategori sudah ada' });
 
-    const category = await prisma.category.create({ data: { name: trimmedName, organizationId: orgId } });
+    const category = await prisma.category.create({ data: { name: normalized, organizationId: orgId } });
     res.status(201).json(category);
 });
 

@@ -153,7 +153,7 @@ export default function Kasir() {
     const cogs = cart.reduce((sum, item) => sum + ((Number(item.costPrice) || 0) * (Number(item.qty) || 0)), 0);
 
     return (
-        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 h-full min-h-[calc(100vh-10rem)] pb-[80px] lg:pb-0 relative w-full">
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 h-full lg:min-h-[calc(100vh-10rem)] relative w-full">
             
             {/* card kiri (daftar produk) */}
             <div className="flex-1 flex flex-col gap-4 w-full min-w-0 max-w-[calc(100vw-32px)] sm:max-w-full">

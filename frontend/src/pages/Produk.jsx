@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { API_BASE } from '../utils/api';
-import { 
-    PlusIcon, 
+import { PlusIcon, 
     MagnifyingGlassIcon, 
     FunnelIcon,
     PencilSquareIcon,
@@ -14,6 +13,7 @@ import {
     ChevronDownIcon,
     CheckIcon
 } from "@heroicons/react/24/outline";
+import Pagination from "../components/Pagination";
 
 export default function Produk() {
     const [products, setProducts] = useState([]);
@@ -40,6 +40,9 @@ export default function Produk() {
     const [categories, setCategories] = useState([]);
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState("");
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const limit = 20;
 
     // OCR State
     const fileInputRef = useRef(null);
@@ -341,11 +344,19 @@ export default function Produk() {
         await handleReceiptFile(file);
     };
 
-    const fetchProducts = async () => {
+    const fetchProducts = async (p = 1) => {
         try {
             setLoading(true);
-            const response = await axios.get(`${API_BASE}/api/products`);
-            setProducts(response.data);
+            const response = await axios.get(`${API_BASE}/api/products`, { params: { page: p, limit } });
+            if (response.data && Array.isArray(response.data.data)) {
+                setProducts(response.data.data);
+                setTotalPages(response.data.totalPages || 1);
+                setPage(response.data.page || 1);
+            } else {
+                setProducts(response.data);
+                setTotalPages(1);
+                setPage(1);
+            }
             setError(null);
         } catch (err) {
             console.error("Gagal mengambil data produk:", err);
@@ -430,18 +441,15 @@ export default function Produk() {
 
         try {
             if (editingProduct) {
-                // Edit existing product
-                const response = await axios.put(`${API_BASE}/api/products/${editingProduct.id}`, payload);
-                setProducts(prev => prev.map(p => p.id === editingProduct.id ? response.data : p));
+                await axios.put(`${API_BASE}/api/products/${editingProduct.id}`, payload);
             } else {
-                // Add new product
-                const response = await axios.post(`${API_BASE}/api/products`, payload);
-                setProducts(prev => [...prev, response.data]);
+                await axios.post(`${API_BASE}/api/products`, payload);
             }
 
             setIsModalOpen(false);
             setEditingProduct(null);
             setFormData({ name: "", category: "", costPrice: "", price: "", stock: "" });
+            fetchProducts(page);
         } catch (err) {
             console.error(editingProduct ? "Gagal mengupdate produk:" : "Gagal menambah produk:", err);
             alert("Gagal menyimpan data produk.");
@@ -465,7 +473,7 @@ export default function Produk() {
         if (confirm) {
             try {
                 await axios.delete(`${API_BASE}/api/products/${id}`);
-                setProducts(prev => prev.filter(p => p.id !== id));
+                fetchProducts(page);
             } catch (err) {
                 console.error("Gagal menghapus produk:", err);
                 alert("Gagal menghapus produk. Silakan coba lagi.");
@@ -495,14 +503,14 @@ export default function Produk() {
         }
 
         try {
-            const response = await axios.post(`${API_BASE}/api/products/${restockProduct.id}/restock`, {
+            await axios.post(`${API_BASE}/api/products/${restockProduct.id}/restock`, {
                 quantity: qty,
                 costPrice: cost,
             });
-            setProducts(prev => prev.map(p => p.id === restockProduct.id ? response.data : p));
             setRestockProduct(null);
             setRestockQty("");
             setRestockCost("");
+            fetchProducts(page);
         } catch (err) {
             console.error("Gagal restock produk:", err);
             alert("Gagal restock produk. Coba lagi.");
@@ -810,6 +818,7 @@ export default function Produk() {
                             )}
                         </tbody>
                     </table>
+                    <Pagination page={page} totalPages={totalPages} onPageChange={(p) => fetchProducts(p)} />
                 </div>
             </div>
 
@@ -893,16 +902,16 @@ export default function Produk() {
                                     placeholder="Nama kategori baru"
                                     className="flex-1 px-4 py-2.5 bg-white border border-[#E6E8EC] rounded-xl text-sm focus:border-[#2936C4] focus:outline-none"
                                 />
-                                <button type="button" onClick={handleCreateCategory} className="btn btn-primary px-4 py-2.5 text-sm">
-                                    Tambah
+                                <button type="button" onClick={handleCreateCategory} className="btn btn-primary px-4 py-2.5 text-sm gap-2">
+                                    <PlusIcon className="w-4 h-4" strokeWidth={2.5} /> Tambah
                                 </button>
                             </div>
                             <div className="space-y-2">
                                 {(categories.length > 0 ? categories : []).map((cat) => (
                                     <div key={cat.id} className="flex items-center justify-between gap-3 p-3 bg-[#F8FAFC] rounded-xl border border-[#E6E8EC]">
                                         <span className="text-sm font-medium text-[#23262F]">{cat.name}</span>
-                                        <button type="button" onClick={() => handleDeleteCategory(cat.id)} className="text-[#E02D3C] text-sm font-bold hover:underline">
-                                            Hapus
+                                        <button type="button" onClick={() => handleDeleteCategory(cat.id)} className="text-[#E02D3C] text-sm font-bold hover:underline flex items-center gap-1">
+                                            <TrashIcon className="w-3.5 h-3.5" /> Hapus
                                         </button>
                                     </div>
                                 ))}
@@ -1025,7 +1034,7 @@ export default function Produk() {
                         try {
                             if (!firstValidItem) {
                                 alert('Produk berhasil diproses. Tidak ada item valid untuk direstock.');
-                                fetchProducts();
+                                fetchProducts(page);
                                 setIsScanResultModalOpen(false);
                                 return;
                             }
@@ -1033,18 +1042,18 @@ export default function Produk() {
                             if (!firstValidItem.linkedProduct?.id) {
                                 console.warn('Link product ID tidak tersedia, melewati restock.');
                                 alert('Produk berhasil diproses, tetapi stok tidak dapat diperbarui karena data tidak lengkap.');
-                                fetchProducts();
+                                fetchProducts(page);
                                 setIsScanResultModalOpen(false);
                                 return;
                             }
 
                             await axios.post(`${API_BASE}/api/products/${firstValidItem.linkedProduct.id}/restock`, {
                                 quantity: firstValidItem.quantity,
-                                costPrice: firstValidItem.price, // Assuming price from receipt is cost price
+                                costPrice: firstValidItem.price,
                             });
 
                             alert('Stok berhasil diperbarui.');
-                            fetchProducts(); // Refresh product list
+                            fetchProducts(page);
                         } catch (err) {
                             console.error("Gagal memperbarui stok dari hasil scan:", err);
                             alert("Hasil pemrosesan produk sudah tersimpan, tetapi pembaruan stok gagal. Cek konsol untuk detail.");

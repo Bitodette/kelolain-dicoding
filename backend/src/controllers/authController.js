@@ -160,4 +160,26 @@ exports.me = async (req, res) => {
   }
 };
 
+exports.updateProfile = asyncHandler(async (req, res) => {
+  const { name, password } = req.body;
+  const userId = req.user.id;
+  const patch = {};
+
+  if (name !== undefined) {
+    patch.name = String(name || '').trim();
+  }
+
+  if (password) {
+    patch.password = await bcrypt.hash(String(password), 10);
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: patch,
+    include: { roles: { include: { role: true } }, organization: true },
+  });
+
+  return res.json({ user: buildUserResponse(updatedUser) });
+});
+
 

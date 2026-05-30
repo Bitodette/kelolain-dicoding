@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom";
 import { 
-    ArrowLeftIcon,
     TrashIcon,
     PencilSquareIcon,
     EyeIcon,
@@ -11,6 +9,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 import { API_BASE } from '../utils/api';
+import Pagination from "../components/Pagination";
 
 export default function RiwayatTransaksi() {
     const isIncomeType = (type) => {
@@ -41,6 +40,8 @@ export default function RiwayatTransaksi() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterType, setFilterType] = useState("Semua");
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -55,11 +56,26 @@ export default function RiwayatTransaksi() {
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [detailTx, setDetailTx] = useState(null);
 
-    const fetchTransactions = async () => {
+    const fetchTransactions = async (p = 1) => {
         try {
             setIsLoading(true);
-            const response = await axios.get(`${API_BASE}/api/transactions`);
-            setTransactions(response.data);
+            if (searchQuery || filterType !== "Semua") {
+                const response = await axios.get(`${API_BASE}/api/transactions`);
+                setTransactions(response.data);
+                setTotalPages(1);
+                setPage(1);
+            } else {
+                const response = await axios.get(`${API_BASE}/api/transactions`, { params: { page: p, limit: 20 } });
+                if (response.data && Array.isArray(response.data.data)) {
+                    setTransactions(response.data.data);
+                    setTotalPages(response.data.totalPages || 1);
+                    setPage(response.data.page || 1);
+                } else {
+                    setTransactions(response.data);
+                    setTotalPages(1);
+                    setPage(1);
+                }
+            }
         } catch (error) {
             console.error("Gagal mengambil data transaksi", error);
         } finally {
@@ -68,15 +84,19 @@ export default function RiwayatTransaksi() {
     };
 
     useEffect(() => {
-        fetchTransactions();
+        fetchTransactions(page);
     }, []);
+
+    useEffect(() => {
+        fetchTransactions(1);
+    }, [searchQuery, filterType]);
 
     const handleDeleteTransaction = async (id, label) => {
         const confirmDelete = window.confirm(`Yakin ingin menghapus riwayat "${label}"?`);
         if (confirmDelete) {
             try {
                 await axios.delete(`${API_BASE}/api/transactions/${id}`);
-                setTransactions(prev => prev.filter(t => t.id !== id));
+                fetchTransactions(page);
             } catch (error) {
                 console.error("Gagal menghapus transaksi", error);
                 alert("Gagal menghapus transaksi.");
@@ -106,15 +126,14 @@ export default function RiwayatTransaksi() {
             type: formType,
             category: formData.category,
             amount: parseInt(formData.amount, 10) || 0,
-            date: formData.date,
+            date: formData.date ? new Date(formData.date).toISOString() : undefined,
         };
 
         try {
-            const res = await axios.put(`${API_BASE}/api/transactions/${editingId}`, payload);
-            const updated = res.data;
-            setTransactions((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+            await axios.put(`${API_BASE}/api/transactions/${editingId}`, payload);
             setIsEditOpen(false);
             setEditingId(null);
+            fetchTransactions(page);
         } catch (error) {
             console.error("Gagal memperbarui transaksi", error);
             alert("Gagal memperbarui transaksi.");
@@ -183,7 +202,7 @@ export default function RiwayatTransaksi() {
                             ) : (
                                 filteredTransactions.map((item, index) => (
                                     <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                                        <td className="px-5 py-4 text-center text-sm text-[#8B95A7] font-medium">{index + 1}</td>
+                                        <td className="px-5 py-4 text-center text-sm text-[#8B95A7] font-medium">{(page - 1) * 20 + index + 1}</td>
                                         <td className="px-5 py-4">
                                             <p className="font-bold text-[#23262F] text-sm">{item.label}</p>
                                             <p className="text-xs font-medium text-[#8B95A7] mt-1">{item.category}</p>
@@ -237,6 +256,9 @@ export default function RiwayatTransaksi() {
                         </tbody>
                     </table>
                 </div>
+                {!searchQuery && filterType === "Semua" && (
+                    <Pagination page={page} totalPages={totalPages} onPageChange={(p) => fetchTransactions(p)} />
+                )}
             </div>
 
             {/* Modal Edit */}
@@ -288,26 +310,39 @@ export default function RiwayatTransaksi() {
 
                                 <div className="flex flex-col gap-1.5">
                                     <label className="text-xs font-bold text-[#6B7280]">Kategori</label>
-                                    <select
-                                        value={formData.category}
-                                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                        className="w-full px-4 py-2.5 bg-white border border-[#E6E8EC] rounded-xl text-sm focus:border-[#2936C4] focus:outline-none appearance-none"
-                                    >
-                                        {formType === "Keluar" ? (
-                                            <>
-                                                <option value="Restock Barang">Restock Barang</option>
-                                                <option value="Operasional">Operasional (Listrik, Air)</option>
-                                                <option value="Gaji Karyawan">Gaji Karyawan</option>
-                                                <option value="Pengeluaran Lainnya">Lainnya</option>
-                                            </>
+                                    {(() => {
+                                        const presetKeluar = ["Restock Barang", "Operasional", "Gaji Karyawan", "Transportasi", "Promosi & Iklan", "Sewa Tempat", "Pengeluaran Lainnya"];
+                                        const presetMasuk = ["Pendapatan Jualan", "Suntikan Modal", "Pendapatan Lainnya"];
+                                        const presets = formType === "Keluar" ? presetKeluar : presetMasuk;
+                                        const isPreset = presets.includes(formData.category);
+
+                                        return isPreset ? (
+                                            <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-[#E6E8EC] rounded-xl text-sm focus:border-[#2936C4] focus:outline-none appearance-none">
+                                                {presets.map((cat) => (
+                                                    <option key={cat} value={cat}>{cat}</option>
+                                                ))}
+                                                <option value="__custom__">Kustom...</option>
+                                            </select>
                                         ) : (
-                                            <>
-                                                <option value="Pendapatan Jualan">Pendapatan Jualan</option>
-                                                <option value="Suntikan Modal">Suntikan Modal</option>
-                                                <option value="Pendapatan Lainnya">Lainnya</option>
-                                            </>
-                                        )}
-                                    </select>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={formData.category === "__custom__" ? "" : formData.category}
+                                                    onChange={(e) => setFormData({ ...formData, category: e.target.value || "__custom__" })}
+                                                    placeholder="Tulis kategori baru..."
+                                                    className="flex-1 px-4 py-2.5 bg-white border border-[#2936C4] rounded-xl text-sm focus:outline-none"
+                                                    autoFocus
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData((prev) => ({ ...prev, category: formType === "Keluar" ? "Restock Barang" : "Pendapatan Jualan" }))}
+                                                    className="text-xs font-semibold text-[#6B7280] hover:text-[#23262F] whitespace-nowrap"
+                                                >
+                                                    Batal
+                                                </button>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
 
                                 <div className="flex flex-col gap-1.5">

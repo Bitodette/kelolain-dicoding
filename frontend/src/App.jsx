@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -12,8 +12,11 @@ import Insight from "./pages/Insight";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Landing from "./pages/Landing";
+import Profile from "./pages/Profile";
 import { applyAuthHeader, getStoredAuth, setStoredAuth } from "./utils/auth";
 import { API_BASE } from "./utils/api";
+import axios from "axios";
 
 const routeToTab = {
   dashboard: "Dashboard",
@@ -22,6 +25,7 @@ const routeToTab = {
   kasir: "Kasir",
   insight: "Insight",
   settings: "Settings",
+  profile: "Profil",
 };
 
 function getActiveTab(pathname) {
@@ -43,6 +47,10 @@ function App() {
   useEffect(() => {
     applyAuthHeader(auth?.token);
   }, [auth?.token]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -79,21 +87,79 @@ function App() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const lowStockTimer = window.setTimeout(() => {
-      setNotifications((current) =>
-        current.some((notif) => notif.id === 'low-stock')
-          ? current
-          : [
-              ...current,
-              { id: 'low-stock', text: 'Alert: stok menipis' },
-            ]
-      );
-    }, 4200);
+    let mounted = true;
+
+    const fetchNotifs = async () => {
+      try {
+        const res = await axios.get(`${API_BASE}/api/products`);
+        const products = Array.isArray(res.data) ? res.data : [];
+        const threshold = 5;
+        const lowStock = products
+          .filter((p) => (Number(p.stock) || 0) <= threshold)
+          .sort((a, b) => (Number(a.stock) || 0) - (Number(b.stock) || 0));
+
+        if (!mounted) return;
+
+        const readIds = new Set(JSON.parse(localStorage.getItem("readNotifs") || "[]"));
+
+        setNotifications((current) => {
+          const existing = new Map(current.map((n) => [n.id, n]));
+          let changed = false;
+
+          lowStock.forEach((p) => {
+            const id = `low-stock-${p.id}`;
+            if (!existing.has(id)) {
+              existing.set(id, {
+                id,
+                text: `Stok "${p.name}" tersisa ${p.stock} pcs`,
+                read: readIds.has(id),
+                link: "/produk",
+              });
+              changed = true;
+            }
+          });
+
+          const currentIds = new Set(lowStock.map((p) => `low-stock-${p.id}`));
+          for (const [id] of existing) {
+            if (id.startsWith("low-stock-") && !currentIds.has(id)) {
+              existing.delete(id);
+              changed = true;
+            }
+          }
+
+          return changed ? Array.from(existing.values()) : current;
+        });
+      } catch (e) {
+        console.error("Gagal mengambil notifikasi:", e);
+      }
+    };
+
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 30000);
 
     return () => {
-      window.clearTimeout(lowStockTimer);
+      mounted = false;
+      clearInterval(interval);
     };
   }, [isAuthenticated]);
+
+  const markNotificationRead = useCallback((id) => {
+    setNotifications((prev) => {
+      const readIds = new Set(JSON.parse(localStorage.getItem("readNotifs") || "[]"));
+      readIds.add(id);
+      localStorage.setItem("readNotifs", JSON.stringify([...readIds]));
+      return prev.map((n) => (n.id === id ? { ...n, read: true } : n));
+    });
+  }, []);
+
+  const markAllNotificationsRead = useCallback(() => {
+    setNotifications((prev) => {
+      const readIds = new Set(JSON.parse(localStorage.getItem("readNotifs") || "[]"));
+      prev.forEach((n) => readIds.add(n.id));
+      localStorage.setItem("readNotifs", JSON.stringify([...readIds]));
+      return prev.map((n) => ({ ...n, read: true }));
+    });
+  }, []);
 
   const handleLogin = (authData) => {
     setStoredAuth(authData);
@@ -121,12 +187,12 @@ function App() {
       )}
 
       <main className="w-screen flex-1 bg-white">
-        {isAuthenticated && <Navbar activeTab={activeTab} setMobileOpen={setMobileOpen} onLogout={handleLogout} notifications={notifications} />}
+        {isAuthenticated && <Navbar activeTab={activeTab} setMobileOpen={setMobileOpen} onLogout={handleLogout} notifications={notifications} onMarkRead={markNotificationRead} onMarkAllRead={markAllNotificationsRead} />}
         <div className={isAuthenticated ? "px-4 sm:px-8 pb-8 mx-auto" : ""}>
           <Routes>
             <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />} />
             <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Register onLogin={handleLogin} />} />
-            <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
+            <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Landing />} />
 
             <Route
               path="/dashboard"
@@ -181,6 +247,14 @@ function App() {
               element={
                 <ProtectedRoute isAuthenticated={isAuthenticated} allowedPages={allowedPages} requiredPage="settings">
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute isAuthenticated={isAuthenticated}>
+                  <Profile />
                 </ProtectedRoute>
               }
             />

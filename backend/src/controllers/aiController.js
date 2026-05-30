@@ -8,10 +8,6 @@ const { asyncHandler } = require('../middlewares/errorHandler');
 
 const AI_BASE_URL = process.env.AI_BASE_URL;
 const RECEIPT_SCANNER_URL = process.env.RECEIPT_SCANNER_URL;
-if (!AI_BASE_URL || !RECEIPT_SCANNER_URL) {
-    console.error('AI_BASE_URL dan RECEIPT_SCANNER_URL wajib diatur di environment variables.');
-    process.exit(1);
-}
 const CACHE_FILE = path.resolve(__dirname, '..', '..', 'ai-prediction-cache.json');
 const MAX_DAILY_SCANS = 10;
 

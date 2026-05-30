@@ -216,7 +216,7 @@ export default function Keuangan() {
             type: formType,
             category: formData.category,
             amount: parseInt(formData.amount) || 0,
-            date: formData.date
+            date: formData.date ? new Date(formData.date).toISOString() : undefined
         };
 
         try {
@@ -682,22 +682,39 @@ export default function Keuangan() {
 
                                 <div className="flex flex-col gap-1.5">
                                     <label className="text-xs font-bold text-[#6B7280]">Kategori</label>
-                                    <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full px-4 py-2.5 bg-white border border-[#E6E8EC] rounded-xl text-sm focus:border-[#2936C4] focus:outline-none appearance-none">
-                                        {formType === "Keluar" ? (
-                                            <>
-                                                <option value="Restock Barang">Restock Barang</option>
-                                                <option value="Operasional">Operasional (Listrik, Air)</option>
-                                                <option value="Gaji Karyawan">Gaji Karyawan</option>
-                                                <option value="Pengeluaran Lainnya">Lainnya</option>
-                                            </>
+                                    {(() => {
+                                        const presetKeluar = ["Restock Barang", "Operasional", "Gaji Karyawan", "Transportasi", "Promosi & Iklan", "Sewa Tempat", "Pengeluaran Lainnya"];
+                                        const presetMasuk = ["Pendapatan Jualan", "Suntikan Modal", "Pendapatan Lainnya"];
+                                        const presets = formType === "Keluar" ? presetKeluar : presetMasuk;
+                                        const isPreset = presets.includes(formData.category);
+
+                                        return isPreset ? (
+                                            <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full px-4 py-2.5 bg-white border border-[#E6E8EC] rounded-xl text-sm focus:border-[#2936C4] focus:outline-none appearance-none">
+                                                {presets.map((cat) => (
+                                                    <option key={cat} value={cat}>{cat}</option>
+                                                ))}
+                                                <option value="__custom__">Kustom...</option>
+                                            </select>
                                         ) : (
-                                            <>
-                                                <option value="Pendapatan Jualan">Pendapatan Jualan</option>
-                                                <option value="Suntikan Modal">Suntikan Modal</option>
-                                                <option value="Pendapatan Lainnya">Lainnya</option>
-                                            </>
-                                        )}
-                                    </select>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={formData.category === "__custom__" ? "" : formData.category}
+                                                    onChange={(e) => setFormData({...formData, category: e.target.value || "__custom__"})}
+                                                    placeholder="Tulis kategori baru..."
+                                                    className="flex-1 px-4 py-2.5 bg-white border border-[#2936C4] rounded-xl text-sm focus:outline-none"
+                                                    autoFocus
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData({...formData, category: formType === "Keluar" ? "Restock Barang" : "Pendapatan Jualan"})}
+                                                    className="text-xs font-semibold text-[#6B7280] hover:text-[#23262F] whitespace-nowrap"
+                                                >
+                                                    Batal
+                                                </button>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
 
                                 <div className="flex flex-col gap-1.5">

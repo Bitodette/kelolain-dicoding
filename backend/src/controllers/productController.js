@@ -9,6 +9,18 @@ const getStatusFromStock = (stock) => {
 
 exports.getProducts = asyncHandler(async (req, res) => {
     const orgId = req.user.organizationId;
+    const page = req.query.page ? Math.max(1, Number(req.query.page)) : null;
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+
+    if (page) {
+        const skip = (page - 1) * limit;
+        const [products, total] = await Promise.all([
+            prisma.product.findMany({ where: { organizationId: orgId }, orderBy: { id: 'asc' }, skip, take: limit }),
+            prisma.product.count({ where: { organizationId: orgId } }),
+        ]);
+        return res.json({ data: products, total, page, totalPages: Math.ceil(total / limit) });
+    }
+
     const products = await prisma.product.findMany({ where: { organizationId: orgId }, orderBy: { id: 'asc' } });
     res.json(products);
 });
