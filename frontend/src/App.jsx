@@ -122,7 +122,7 @@ function App() {
 
       <main className="w-screen flex-1 bg-white">
         {isAuthenticated && <Navbar activeTab={activeTab} setMobileOpen={setMobileOpen} onLogout={handleLogout} notifications={notifications} />}
-        <div className={isAuthenticated ? "px-4 sm:px-8 pb-8 max-w-7xl mx-auto" : ""}>
+        <div className={isAuthenticated ? "px-4 sm:px-8 pb-8 mx-auto" : ""}>
           <Routes>
             <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />} />
             <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Register onLogin={handleLogin} />} />
