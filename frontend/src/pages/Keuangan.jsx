@@ -414,7 +414,7 @@ export default function Keuangan() {
                             <ChevronDownIcon className="h-4 w-4 text-[#6B7280]" />
                         </button>
                         {isPeriodOpen && (
-                            <div className="absolute mt-2 right-0 w-44 bg-white border border-[#E6E8EC] rounded-xl shadow-lg z-40">
+                            <div className="absolute mt-2 sm:right-0 w-44 bg-white border border-[#E6E8EC] rounded-xl shadow-lg z-40">
                                 <ul className="p-2">
                                     {['Minggu ini', 'Bulan ini', 'Tahun ini', 'Semua'].map((option) => (
                                         <li key={option}>
