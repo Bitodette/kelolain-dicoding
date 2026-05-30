@@ -115,12 +115,12 @@ function App() {
   }
 
   return (
-    <div className="flex min-h-screen bg-white font-sans text-gray-900">
+    <div className="max-w-[1920px] w-full flex min-h-screen bg-white font-sans text-gray-900">
       {isAuthenticated && (
         <Sidebar activeTab={activeTab} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} allowedPages={allowedPages} />
       )}
 
-      <main className="flex-1 bg-white">
+      <main className="w-screen flex-1 bg-white">
         {isAuthenticated && <Navbar activeTab={activeTab} setMobileOpen={setMobileOpen} onLogout={handleLogout} notifications={notifications} />}
         <div className={isAuthenticated ? "px-4 sm:px-8 pb-8 max-w-7xl mx-auto" : ""}>
           <Routes>
