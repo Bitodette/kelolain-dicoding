@@ -119,13 +119,17 @@ const safeAiRequest = async (url, payload) => {
 
 // --- prediksi & fallback (kalo ai mati) ---
 exports.getRevenuePrediction = asyncHandler(async (req, res) => {
-    const revenueData = [0, 0, 0];
+    const now = new Date();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const dayQueries = [0, 1, 2].map((i) => {
+    if (now.getHours() < 20) {
+        today.setDate(today.getDate() - 1);
+    }
+
+    const dayQueries = [0, 1, 2, 3, 4, 5, 6].map((i) => {
         const targetDate = new Date(today);
-        targetDate.setDate(today.getDate() - (2 - i));
+        targetDate.setDate(today.getDate() - i);
         const nextDate = new Date(targetDate);
         nextDate.setDate(targetDate.getDate() + 1);
 
@@ -140,13 +144,21 @@ exports.getRevenuePrediction = asyncHandler(async (req, res) => {
     });
 
     const results = await Promise.all(dayQueries);
-    results.forEach((result, i) => { revenueData[i] = result._sum.amount || 0; });
+
+    const nonZeroDays = [];
+    results.forEach((result) => {
+        const amount = result._sum.amount || 0;
+        if (amount > 0) {
+            nonZeroDays.push(amount);
+        }
+    });
+
+    const revenueData = nonZeroDays.slice(0, 3).reverse();
 
     const payload = { data: revenueData };
     const cacheKey = stableStringify(payload);
 
-    const nonZeroDays = revenueData.filter((value) => Number(value) > 0).length;
-    if (nonZeroDays < 3) {
+    if (revenueData.length < 3) {
         const emptyResponse = { result: [], fallback: true, message: 'Data historis belum cukup untuk prediksi.' };
         cache.revenue.key = cacheKey;
         cache.revenue.data = emptyResponse;
@@ -176,10 +188,16 @@ exports.getRevenuePrediction = asyncHandler(async (req, res) => {
 
 // PREDIKSI DEMAND (STOK)
 exports.getDemandPrediction = asyncHandler(async (req, res) => {
+    const now = new Date();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const threeDaysAgo = new Date(today);
-    threeDaysAgo.setDate(today.getDate() - 2);
+
+    if (now.getHours() < 20) {
+        today.setDate(today.getDate() - 1);
+    }
+
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 6);
 
     const products = await prisma.product.findMany({ where: { organizationId: req.user.organizationId } });
     
@@ -187,12 +205,36 @@ exports.getDemandPrediction = asyncHandler(async (req, res) => {
         where: {
             organizationId: req.user.organizationId,
             type: 'Masuk',
-            createdAt: { gte: threeDaysAgo }
+            createdAt: { gte: sevenDaysAgo }
         }
     });
 
-    const demandPayload = {};
+    const dayTxsMap = new Map();
+    recentTransactions.forEach(tx => {
+        if (!tx.items) return;
+        const txDate = new Date(tx.createdAt);
+        txDate.setHours(0, 0, 0, 0);
+        const key = txDate.getTime();
+        if (!dayTxsMap.has(key)) {
+            dayTxsMap.set(key, []);
+        }
+        dayTxsMap.get(key).push(tx);
+    });
 
+    if (dayTxsMap.size < 3) {
+        const emptyPayload = { data: null };
+        const cacheKey = stableStringify(emptyPayload);
+        const emptyResponse = { result: [], fallback: true, message: 'Data historis belum cukup untuk prediksi stok.' };
+        cache.demand.key = cacheKey;
+        cache.demand.data = emptyResponse;
+        await saveCacheToFile(cache);
+        return res.json(emptyResponse);
+    }
+
+    const sortedDays = Array.from(dayTxsMap.keys()).sort((a, b) => a - b);
+    const recent3Days = sortedDays.slice(-3);
+
+    const demandPayload = {};
     products.forEach(p => {
         demandPayload[p.name] = {
             demand: [0, 0, 0],
@@ -200,40 +242,22 @@ exports.getDemandPrediction = asyncHandler(async (req, res) => {
         };
     });
 
-    recentTransactions.forEach(tx => {
-        if (!tx.items) return;
-        const items = typeof tx.items === 'string' ? JSON.parse(tx.items) : tx.items;
-        const cart = items.cart || [];
-
-        const txDate = new Date(tx.createdAt);
-        txDate.setHours(0, 0, 0, 0);
-        const dayIndex = Math.floor((txDate.getTime() - threeDaysAgo.getTime()) / (1000 * 60 * 60 * 24));
-
-        if (dayIndex >= 0 && dayIndex <= 2) {
+    recent3Days.forEach((timestamp, idx) => {
+        const dayTxs = dayTxsMap.get(timestamp);
+        dayTxs.forEach(tx => {
+            if (!tx.items) return;
+            const items = typeof tx.items === 'string' ? JSON.parse(tx.items) : tx.items;
+            const cart = items.cart || [];
             cart.forEach(item => {
                 if (demandPayload[item.name]) {
-                    demandPayload[item.name].demand[dayIndex] += (item.qty || 0);
+                    demandPayload[item.name].demand[idx] += (item.qty || 0);
                 }
             });
-        }
+        });
     });
 
     const payload = { data: demandPayload };
     const cacheKey = stableStringify(payload);
-
-    const transactionDays = new Set(recentTransactions.map((tx) => {
-        const txDate = new Date(tx.createdAt);
-        txDate.setHours(0, 0, 0, 0);
-        return txDate.getTime();
-    }));
-
-    if (transactionDays.size < 3) {
-        const emptyResponse = { result: [], fallback: true, message: 'Data historis belum cukup untuk prediksi stok.' };
-        cache.demand.key = cacheKey;
-        cache.demand.data = emptyResponse;
-        await saveCacheToFile(cache);
-        return res.json(emptyResponse);
-    }
 
     if (cache.demand.key === cacheKey && cache.demand.data) {
         return res.json(cache.demand.data);
@@ -257,16 +281,22 @@ exports.getDemandPrediction = asyncHandler(async (req, res) => {
 
 // rekomendasi bundling
 exports.getBundlingSuggestion = asyncHandler(async (req, res) => {
+    const now = new Date();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const threeDaysAgo = new Date(today);
-    threeDaysAgo.setDate(today.getDate() - 2);
+
+    if (now.getHours() < 20) {
+        today.setDate(today.getDate() - 1);
+    }
+
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 6);
 
     const transactions = await prisma.transactions.findMany({
         where: {
             organizationId: req.user.organizationId,
             type: 'Masuk',
-            createdAt: { gte: threeDaysAgo }
+            createdAt: { gte: sevenDaysAgo }
         },
         orderBy: { createdAt: 'desc' },
         take: 100 
@@ -401,53 +431,71 @@ exports.scanReceipt = asyncHandler(async (req, res) => {
         return res.status(429).json({ message: 'Anda telah mencapai batas maksimal 10 scan struk per hari.' });
     }
 
-    const compressed = await compressImage(req.file.buffer);
-
-    // cek blur dulu (kalo gagal/gak jelas, tetep lanjut extraction)
-    const blurFormData = createAiFormData(req.file, compressed);
     try {
-        const blurRes = await axios.post(`${AI_BASE_URL}/predict/blur`, blurFormData, {
-            headers: blurFormData.getHeaders(),
-            timeout: 15000,
+        // 1. cek blur
+        const blurFormData = new FormData();
+        blurFormData.append('file', req.file.buffer, {
+            filename: req.file.originalname,
+            contentType: req.file.mimetype,
         });
-        if (blurRes?.data?.prediction === 'blurry') {
-            console.warn('Blur check: image classified as blurry, proceeding anyway');
-        }
-    } catch (err) {
-        console.error('Blur check skipped (AI service error):', err.message);
-    }
 
-    // extract text
-    let extractData;
-    try {
-        extractData = await postToAi(`${RECEIPT_SCANNER_URL}/extract-text`, createAiFormData(req.file, compressed));
-    } catch (err) {
-        console.error('Receipt scanner AI service error (URL:', `${RECEIPT_SCANNER_URL}/extract-text):`, err.message);
-        if (err.response) {
-            console.error('Scanner response status:', err.response.status, 'data:', JSON.stringify(err.response.data));
-        } else {
-            console.error('No response from AI service — check RECEIPT_SCANNER_URL or network');
+        let isBlurry = false;
+        try {
+            const blurRes = await axios.post(`${AI_BASE_URL}/predict/blur`, blurFormData, {
+                headers: blurFormData.getHeaders(),
+                timeout: 15000,
+            });
+            isBlurry = blurRes.data?.prediction === 'blurry';
+        } catch (err) {
+            console.error('Blur check AI service error:', err.message);
         }
-        return res.status(502).json({
-            message: 'Gagal memindai struk. Silakan coba lagi.',
-            error: 'scan_failed',
+
+        if (isBlurry) {
+            return res.status(422).json({
+                message: 'Gambar struk buram atau tidak jelas. Silakan coba lagi.',
+                error: 'blurry_image',
+            });
+        }
+
+        // 2. extract text
+        const extractFormData = new FormData();
+        extractFormData.append('file', req.file.buffer, {
+            filename: req.file.originalname,
+            contentType: req.file.mimetype,
+        });
+
+        const extractResponse = await axios.post(`${RECEIPT_SCANNER_URL}/extract-text`, extractFormData, {
+            headers: extractFormData.getHeaders(),
+            timeout: 30000,
+        });
+
+        const extractData = extractResponse.data || {};
+        const rawItems = Array.isArray(extractData.items) ? extractData.items : Array.isArray(extractData.result) ? extractData.result : [];
+        const items = rawItems.map((item) => ({
+            name: item.name || item.item_name || item.product_name || item.description || '',
+            price: item.price || item.price_text || item.harga || '',
+            quantity: item.quantity || item.qty || item.quantity_text || '',
+            raw: item,
+        }));
+
+        await incrementScanCount(req.user.id, limit.scanCount);
+
+        res.json({ items, raw: extractData, remaining: limit.remaining - 1 });
+    } catch (error) {
+        console.error('Error during receipt scan:', error.message);
+
+        if (error.response) {
+            console.error('Error response data:', error.response.data);
+            return res.status(error.response.status || 500).json({
+                message: 'Gagal memproses struk.',
+                error: error.response.data,
+            });
+        }
+
+        res.status(500).json({
+            message: 'Terjadi kesalahan internal saat memproses struk.',
         });
     }
-
-    // normalize response dari ai (format bisa beda2)
-    extractData = extractData || {};
-    const rawItems = Array.isArray(extractData.items) ? extractData.items : Array.isArray(extractData.result) ? extractData.result : [];
-    const items = rawItems.map((item) => ({
-        name: item.name || item.item_name || item.product_name || item.description || '',
-        price: item.price || item.price_text || item.harga || '',
-        quantity: item.quantity || item.qty || item.quantity_text || '',
-        raw: item,
-    }));
-
-    // baru diitung sebagai pemakaian quota kalo sukses
-    await incrementScanCount(req.user.id, limit.scanCount);
-
-    res.json({ items, raw: extractData, remaining: limit.remaining - 1 });
 });
 
 exports.checkReceiptBlur = asyncHandler(async (req, res) => {
@@ -456,11 +504,19 @@ exports.checkReceiptBlur = asyncHandler(async (req, res) => {
     }
 
     try {
-        const compressed = await compressImage(req.file.buffer);
-        const data = await postToAi(`${AI_BASE_URL}/predict/blur`, createAiFormData(req.file, compressed));
-        res.json({ prediction: data?.prediction || 'unknown' });
-    } catch (err) {
-        console.error('Blur check AI service error:', err.message);
-        res.status(502).json({ prediction: 'unknown', error: 'blur_check_failed', message: 'Gagal memeriksa kualitas gambar.' });
+        const blurFormData = new FormData();
+        blurFormData.append('file', req.file.buffer, {
+            filename: req.file.originalname,
+            contentType: req.file.mimetype,
+        });
+
+        const blurResponse = await axios.post(`${AI_BASE_URL}/predict/blur`, blurFormData, {
+            headers: blurFormData.getHeaders(),
+        });
+
+        res.json({ prediction: blurResponse.data?.prediction || 'unknown' });
+    } catch (error) {
+        console.error('Error during blur check:', error.message);
+        res.status(500).json({ message: 'Gagal memeriksa ketajaman struk.' });
     }
 });
