@@ -172,7 +172,7 @@ export default function Settings() {
           <h1 className="text-lg font-bold text-[#23262F]">Pengaturan Role & Pengguna</h1>
           <p className="text-sm text-[#6B7280] mt-1">Kelola role dan hak akses halaman untuk akun pengguna.</p>
         </div>
-        <div className="flex items-center gap-2">
+        {/* <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab('roles')}
             className={`rounded-full px-4 py-2 text-sm font-semibold ${activeTab === 'roles' ? 'bg-[#2936C4] text-white' : 'bg-white text-[#23262F] border border-[#E6E8EC]'}`}
@@ -185,7 +185,7 @@ export default function Settings() {
           >
             Pengguna
           </button>
-        </div>
+        </div> */}
       </div>
 
       {successMessage && (
