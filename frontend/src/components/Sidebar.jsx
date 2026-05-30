@@ -76,7 +76,7 @@ export default function Sidebar({ activeTab, mobileOpen, setMobileOpen, allowedP
   const baseWidth = collapsed ? "w-[88px]" : "w-64";
 
   return (
-    <div className={`bg-[#F9F9F9] h-screen border-r border-gray-100 flex flex-col transition-transform duration-300 ${baseWidth} transform ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:sticky lg:top-0 lg:self-start lg:shrink-0 lg:flex z-50 overflow-y-auto`}>
+    <div className={`bg-[#F9F9F9] h-screen border-r border-gray-100 flex flex-col transition-transform duration-300 ${baseWidth} transform ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} xl:translate-x-0 fixed xl:sticky xl:top-0 xl:self-start xl:shrink-0 xl:flex z-50 overflow-y-auto`}>
       {/* logo */}
       <div className="relative flex items-center justify-center py-9">
         <div className={logoWrapperClass}>

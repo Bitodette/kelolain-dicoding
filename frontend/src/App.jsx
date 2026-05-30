@@ -195,7 +195,7 @@ function App() {
       {mobileOpen && isAuthenticated && (
         <div
           onClick={() => setMobileOpen(false)}
-          className="fixed inset-0 bg-black/30 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/30 z-40 xl:hidden"
         />
       )}
     </div>
