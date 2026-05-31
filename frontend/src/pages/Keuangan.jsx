@@ -400,14 +400,16 @@ export default function Keuangan() {
                             type="date" 
                             value={startDate} 
                             onChange={(e) => handleDateChange("start", e.target.value)} 
-                            className={`appearance-none rounded-xl border py-2 px-3 text-xs outline-none cursor-pointer transition-colors ${startDate ? 'border-[#2936C4] bg-indigo-50 text-[#2936C4] font-semibold' : 'border-[#E6E8EC] bg-white text-[#6B7280]'}`}
+                            className={`rounded-xl border py-2 px-3 text-xs outline-none cursor-pointer transition-colors ${startDate ? 'border-[#2936C4] bg-indigo-50 text-[#2936C4] font-semibold' : 'border-[#E6E8EC] bg-white text-[#6B7280]'}`}
+                            style={{ colorScheme: 'light' }}
                         />
                         <span className="text-[#6B7280]">-</span>
                         <input 
                             type="date" 
                             value={endDate} 
                             onChange={(e) => handleDateChange("end", e.target.value)} 
-                            className={`appearance-none rounded-xl border py-2 px-3 text-xs outline-none cursor-pointer transition-colors ${endDate ? 'border-[#2936C4] bg-indigo-50 text-[#2936C4] font-semibold' : 'border-[#E6E8EC] bg-white text-[#6B7280]'}`}
+                            className={`rounded-xl border py-2 px-3 text-xs outline-none cursor-pointer transition-colors ${endDate ? 'border-[#2936C4] bg-indigo-50 text-[#2936C4] font-semibold' : 'border-[#E6E8EC] bg-white text-[#6B7280]'}`}
+                            style={{ colorScheme: 'light' }}
                         />
                     </div>
                     <div className="relative">
