@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Logo from "../components/Logo";
 
@@ -89,7 +90,60 @@ const screenshots = [
   { label: "Insight AI", desc: "Prediksi & rekomendasi cerdas" },
 ];
 
+function useOnScreen(threshold = 0.15) {
+  const ref = useRef(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(el);
+        }
+      },
+      { threshold }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [threshold]);
+
+  return [ref, isVisible];
+}
+
+function AnimatedCounter({ target, suffix = "" }) {
+  const [count, setCount] = useState(0);
+  const [ref, isVisible] = useOnScreen(0.5);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    let start = 0;
+    const duration = 1200;
+    const step = Math.ceil(target / (duration / 16));
+    const timer = setInterval(() => {
+      start += step;
+      if (start >= target) {
+        setCount(target);
+        clearInterval(timer);
+      } else {
+        setCount(start);
+      }
+    }, 16);
+    return () => clearInterval(timer);
+  }, [isVisible, target]);
+
+  return <span ref={ref}>{count}{suffix}</span>;
+}
+
 export default function Landing() {
+  const [heroRef, heroVisible] = useOnScreen(0.1);
+  const [featuresRef, featuresVisible] = useOnScreen(0.1);
+  const [screenshotsRef, screenshotsVisible] = useOnScreen(0.1);
+  const [stepsRef, stepsVisible] = useOnScreen(0.1);
+  const [ctaRef, ctaVisible] = useOnScreen(0.1);
+
   return (
     <div className="min-h-screen bg-white font-sans text-[#23262F] overflow-hidden">
       {/* Navbar */}
@@ -122,13 +176,16 @@ export default function Landing() {
       </header>
 
       {/* Hero */}
-      <section className="relative pt-12 sm:pt-20 pb-20 sm:pb-32 px-4">
+      <section
+        ref={heroRef}
+        className="relative pt-12 sm:pt-20 pb-20 sm:pb-32 px-4"
+      >
         <div className="absolute inset-0 bg-gradient-to-b from-[#EEF2FF] via-white to-white pointer-events-none" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[#2936C4]/[0.03] rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <div className="text-center lg:text-left">
+            <div className={`text-center lg:text-left transition-all duration-700 ease-out ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
               <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EEF2FF] text-[#2936C4] text-xs sm:text-sm font-semibold mb-6">
                 <span className="w-2 h-2 rounded-full bg-[#2936C4] animate-pulse" />
                 All-in-One Business Management
@@ -157,22 +214,28 @@ export default function Landing() {
               <div className="flex items-center gap-6 mt-8 justify-center lg:justify-start">
                 <div className="flex -space-x-2">
                   {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#2936C4] to-[#66D3CC] flex items-center justify-center text-white text-xs sm:text-sm font-bold border-2 border-white">
+                    <div
+                      key={i}
+                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#2936C4] to-[#66D3CC] flex items-center justify-center text-white text-xs sm:text-sm font-bold border-2 border-white transition-all duration-500 ease-out ${heroVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}
+                      style={{ transitionDelay: `${300 + i * 100}ms` }}
+                    >
                       {String.fromCharCode(64 + i)}
                     </div>
                   ))}
                 </div>
-                <div className="text-left">
-                  <div className="text-sm sm:text-base font-extrabold text-[#23262F]">500+</div>
+                <div className={`text-left transition-all duration-700 delay-500 ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+                  <div className="text-sm sm:text-base font-extrabold text-[#23262F]">
+                    <AnimatedCounter target={500} />+
+                  </div>
                   <div className="text-xs sm:text-sm text-[#8B95A7]">bisnis sudah bergabung</div>
                 </div>
               </div>
             </div>
 
             {/* Hero Image / Mockup */}
-            <div className="relative flex items-center justify-center">
+            <div className={`relative flex items-center justify-center transition-all duration-700 delay-200 ease-out ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
               <div className="relative w-full max-w-[400px] lg:max-w-none">
-                <div className="aspect-[9/19] bg-gradient-to-br from-[#EEF2FF] to-[#DEE3FF] rounded-[3rem] border-[6px] border-[#23262F] shadow-2xl mx-auto max-w-[280px] sm:max-w-[320px] relative overflow-hidden">
+                <div className="aspect-[9/19] bg-gradient-to-br from-[#EEF2FF] to-[#DEE3FF] rounded-[3rem] border-[6px] border-[#23262F] shadow-2xl mx-auto max-w-[280px] sm:max-w-[320px] relative overflow-hidden animate-float">
                   <div className="absolute top-0 left-0 right-0 h-5 sm:h-6 bg-[#23262F] flex items-center justify-center">
                     <div className="w-16 sm:w-20 h-1 sm:h-1.5 rounded-full bg-white/20" />
                   </div>
@@ -186,22 +249,12 @@ export default function Landing() {
                       <div className="h-3 sm:h-3.5 w-3/4 rounded-md bg-[#2936C4]/10" />
                       <div className="h-3 sm:h-3.5 w-1/2 rounded-md bg-[#2936C4]/10" />
                       <div className="grid grid-cols-2 gap-2 mt-3">
-                        <div className="h-16 sm:h-20 rounded-xl bg-white shadow-sm border border-[#E6E8EC] p-2 flex flex-col justify-between">
-                          <div className="h-2 w-2/3 rounded bg-[#2936C4]/10" />
-                          <div className="h-4 w-1/2 rounded bg-[#66D3CC]/20" />
-                        </div>
-                        <div className="h-16 sm:h-20 rounded-xl bg-white shadow-sm border border-[#E6E8EC] p-2 flex flex-col justify-between">
-                          <div className="h-2 w-2/3 rounded bg-[#2936C4]/10" />
-                          <div className="h-4 w-1/2 rounded bg-[#66D3CC]/20" />
-                        </div>
-                        <div className="h-16 sm:h-20 rounded-xl bg-white shadow-sm border border-[#E6E8EC] p-2 flex flex-col justify-between">
-                          <div className="h-2 w-2/3 rounded bg-[#2936C4]/10" />
-                          <div className="h-4 w-1/2 rounded bg-[#66D3CC]/20" />
-                        </div>
-                        <div className="h-16 sm:h-20 rounded-xl bg-white shadow-sm border border-[#E6E8EC] p-2 flex flex-col justify-between">
-                          <div className="h-2 w-2/3 rounded bg-[#2936C4]/10" />
-                          <div className="h-4 w-1/2 rounded bg-[#66D3CC]/20" />
-                        </div>
+                        {[0, 1, 2, 3].map((j) => (
+                          <div key={j} className="h-16 sm:h-20 rounded-xl bg-white shadow-sm border border-[#E6E8EC] p-2 flex flex-col justify-between">
+                            <div className="h-2 w-2/3 rounded bg-[#2936C4]/10" />
+                            <div className="h-4 w-1/2 rounded bg-[#66D3CC]/20" />
+                          </div>
+                        ))}
                       </div>
                       <div className="h-16 sm:h-20 rounded-xl bg-white shadow-sm border border-[#E6E8EC] p-3">
                         <div className="flex items-center gap-2 mb-2">
@@ -216,7 +269,6 @@ export default function Landing() {
                     </div>
                   </div>
                 </div>
-                {/* Decorative elements */}
                 <div className="hidden lg:block absolute -top-8 -right-8 w-24 h-24 bg-[#66D3CC]/10 rounded-full blur-xl" />
                 <div className="hidden lg:block absolute -bottom-4 -left-8 w-32 h-32 bg-[#2936C4]/10 rounded-full blur-xl" />
               </div>
@@ -226,9 +278,9 @@ export default function Landing() {
       </section>
 
       {/* Features */}
-      <section id="fitur" className="py-16 sm:py-24 px-4">
+      <section id="fitur" ref={featuresRef} className="py-16 sm:py-24 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12 sm:mb-16">
+          <div className={`text-center mb-12 sm:mb-16 transition-all duration-700 ease-out ${featuresVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <span className="text-xs sm:text-sm font-bold uppercase tracking-widest text-[#2936C4]">Fitur</span>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mt-3 mb-4">
               Semua yang Anda Butuhkan
@@ -242,9 +294,10 @@ export default function Landing() {
             {features.map((f, i) => (
               <div
                 key={i}
-                className="group relative bg-white border border-[#E6E8EC] rounded-2xl p-6 sm:p-8 hover:shadow-lg hover:border-[#2936C4]/20 transition-all duration-300"
+                className={`group relative bg-white border border-[#E6E8EC] rounded-2xl p-6 sm:p-8 hover:shadow-lg hover:border-[#2936C4]/20 hover:-translate-y-1 transition-all duration-300 ease-out ${featuresVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+                style={{ transitionDelay: `${i * 100}ms` }}
               >
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-[#EEF2FF] flex items-center justify-center text-[#2936C4] mb-5 group-hover:scale-110 transition-transform duration-300">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-[#EEF2FF] flex items-center justify-center text-[#2936C4] mb-5 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                   {f.icon}
                 </div>
                 <h3 className="text-lg sm:text-xl font-bold mb-2.5">{f.title}</h3>
@@ -256,9 +309,9 @@ export default function Landing() {
       </section>
 
       {/* Screenshots Preview */}
-      <section id="screenshot" className="py-16 sm:py-24 px-4 bg-[#F8FAFC]">
+      <section id="screenshot" ref={screenshotsRef} className="py-16 sm:py-24 px-4 bg-[#F8FAFC]">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12 sm:mb-16">
+          <div className={`text-center mb-12 sm:mb-16 transition-all duration-700 ease-out ${screenshotsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <span className="text-xs sm:text-sm font-bold uppercase tracking-widest text-[#2936C4]">Preview</span>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mt-3 mb-4">
               Lihat Tampilan Aplikasi
@@ -270,9 +323,13 @@ export default function Landing() {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-5">
             {screenshots.map((s, i) => (
-              <div key={i} className="group cursor-pointer">
-                <div className="aspect-[9/16] rounded-2xl bg-gradient-to-br from-[#EEF2FF] to-white border border-[#E6E8EC] flex flex-col items-center justify-center p-6 group-hover:shadow-lg transition-all duration-300">
-                  <svg className="w-10 h-10 text-[#2936C4]/30 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+              <div
+                key={i}
+                className={`group cursor-pointer transition-all duration-500 ease-out ${screenshotsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+                style={{ transitionDelay: `${i * 120}ms` }}
+              >
+                <div className="aspect-[9/16] rounded-2xl bg-gradient-to-br from-[#EEF2FF] to-white border border-[#E6E8EC] flex flex-col items-center justify-center p-6 group-hover:shadow-lg group-hover:-translate-y-1 transition-all duration-300">
+                  <svg className="w-10 h-10 text-[#2936C4]/30 mb-3 group-hover:scale-110 group-hover:text-[#2936C4]/50 transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.41a2.25 2.25 0 0 1 3.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
                   </svg>
                   <span className="text-xs sm:text-sm text-center font-semibold text-[#8B95A7] group-hover:text-[#23262F] transition-colors">{s.label}</span>
@@ -282,7 +339,7 @@ export default function Landing() {
             ))}
           </div>
 
-          <div className="mt-10 text-center">
+          <div className={`mt-10 text-center transition-all duration-700 ease-out delay-300 ${screenshotsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
             <Link to="/register" className="btn btn-primary text-sm sm:text-base !px-8 !py-3.5">
               Coba Gratis Sekarang
             </Link>
@@ -291,9 +348,9 @@ export default function Landing() {
       </section>
 
       {/* How It Works */}
-      <section id="cara-kerja" className="py-16 sm:py-24 px-4">
+      <section id="cara-kerja" ref={stepsRef} className="py-16 sm:py-24 px-4">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12 sm:mb-16">
+          <div className={`text-center mb-12 sm:mb-16 transition-all duration-700 ease-out ${stepsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <span className="text-xs sm:text-sm font-bold uppercase tracking-widest text-[#2936C4]">Cara Kerja</span>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mt-3 mb-4">
               Mulai dalam 4 Langkah
@@ -307,14 +364,18 @@ export default function Landing() {
             <div className="hidden sm:block absolute left-1/2 -translate-x-0.5 top-0 bottom-0 w-0.5 bg-[#E6E8EC]" />
             <div className="space-y-8 sm:space-y-12">
               {steps.map((step, i) => (
-                <div key={i} className={`relative flex flex-col sm:flex-row items-center gap-6 sm:gap-8 ${i % 2 === 0 ? 'sm:flex-row' : 'sm:flex-row-reverse'}`}>
+                <div
+                  key={i}
+                  className={`relative flex flex-col sm:flex-row items-center gap-6 sm:gap-8 ${i % 2 === 0 ? 'sm:flex-row' : 'sm:flex-row-reverse'} transition-all duration-700 ease-out ${stepsVisible ? 'opacity-100 translate-x-0' : `opacity-0 ${i % 2 === 0 ? '-translate-x-8' : 'translate-x-8'}`}`}
+                  style={{ transitionDelay: `${i * 150}ms` }}
+                >
                   <div className="flex-1 text-center sm:text-left">
                     <span className="text-[#2936C4]/20 text-5xl sm:text-6xl font-extrabold select-none">{step.number}</span>
                     <h3 className="text-xl sm:text-2xl font-bold mt-1 mb-2">{step.title}</h3>
                     <p className="text-[#6B7280]">{step.desc}</p>
                   </div>
                   <div className="relative flex-shrink-0">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#2936C4] flex items-center justify-center text-white font-extrabold text-lg shadow-lg shadow-[#2936C4]/20 z-10 relative">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#2936C4] flex items-center justify-center text-white font-extrabold text-lg shadow-lg shadow-[#2936C4]/20 z-10 relative transition-transform duration-300 hover:scale-110">
                       {i + 1}
                     </div>
                   </div>
@@ -327,8 +388,8 @@ export default function Landing() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 sm:py-24 px-4">
-        <div className="max-w-4xl mx-auto text-center bg-gradient-to-br from-[#2936C4] to-[#1a1f7a] rounded-3xl p-8 sm:p-16 relative overflow-hidden">
+      <section ref={ctaRef} className="py-16 sm:py-24 px-4">
+        <div className={`max-w-4xl mx-auto text-center bg-gradient-to-br from-[#2936C4] to-[#1a1f7a] rounded-3xl p-8 sm:p-16 relative overflow-hidden transition-all duration-700 ease-out ${ctaVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#66D3CC]/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl" />
 
@@ -340,13 +401,13 @@ export default function Landing() {
               Bergabung dengan 500+ bisnis lainnya. Gratis, tanpa ribet, tanpa kartu kredit.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link to="/register" className="inline-flex items-center gap-2 bg-white text-[#2936C4] font-bold px-8 py-3.5 rounded-xl hover:bg-[#EEF2FF] transition-colors text-sm sm:text-base shadow-lg">
+              <Link to="/register" className="group inline-flex items-center gap-2 bg-white text-[#2936C4] font-bold px-8 py-3.5 rounded-xl hover:bg-[#EEF2FF] hover:scale-[1.02] transition-all duration-200 text-sm sm:text-base shadow-lg">
                 Daftar Gratis Sekarang
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                 </svg>
               </Link>
-              <Link to="/login" className="inline-flex items-center gap-2 text-white/80 hover:text-white font-semibold px-6 py-3.5 rounded-xl border border-white/20 hover:border-white/40 transition-colors text-sm sm:text-base">
+              <Link to="/login" className="inline-flex items-center gap-2 text-white/80 hover:text-white font-semibold px-6 py-3.5 rounded-xl border border-white/20 hover:border-white/40 transition-all duration-200 text-sm sm:text-base">
                 Sudah punya akun? Masuk
               </Link>
             </div>

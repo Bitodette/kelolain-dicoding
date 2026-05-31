@@ -34,7 +34,7 @@ exports.createProduct = asyncHandler(async (req, res) => {
     const selectedCategoryId = Number.isFinite(Number(categoryId)) ? parseInt(categoryId, 10) : null;
     let categoryName = String(category || '').trim() || null;
 
-    const existingProduct = await prisma.product.findFirst({ where: { name, organizationId: orgId } });
+    const existingProduct = await prisma.product.findFirst({ where: { name: { equals: name, mode: 'insensitive' }, organizationId: orgId } });
     if (existingProduct) {
         return res.status(409).json({ error: 'Produk dengan nama tersebut sudah ada.' });
     }
@@ -91,8 +91,8 @@ exports.updateProduct = asyncHandler(async (req, res) => {
     const existingProduct = await prisma.product.findFirst({ where: { id, organizationId: orgId } });
     if (!existingProduct) return res.status(404).json({ error: 'Produk tidak ditemukan' });
 
-    if (name && name !== existingProduct.name) {
-        const duplicate = await prisma.product.findFirst({ where: { name, organizationId: orgId, id: { not: id } } });
+    if (name && name.toLowerCase().trim() !== existingProduct.name.toLowerCase().trim()) {
+        const duplicate = await prisma.product.findFirst({ where: { name: { equals: name, mode: 'insensitive' }, organizationId: orgId, id: { not: id } } });
         if (duplicate) {
             return res.status(409).json({ error: 'Produk dengan nama tersebut sudah ada.' });
         }
