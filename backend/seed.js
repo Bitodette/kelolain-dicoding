@@ -30,7 +30,6 @@ const transactions = [
     amount: 254000,
     cogs: 175000,
     createdAt: new Date(new Date().setDate(new Date().getDate() - 2)),
-    time: '09:20',
     items: {
       cart: [
         { name: 'Beras 5kg', qty: 1, price: 55000 },
@@ -46,7 +45,6 @@ const transactions = [
     amount: 182000,
     cogs: 128000,
     createdAt: new Date(new Date().setDate(new Date().getDate() - 2)),
-    time: '12:15',
     items: {
       cart: [
         { name: 'Roti Tawar', qty: 2, price: 10000 },
@@ -61,7 +59,7 @@ const transactions = [
     amount: 215000,
     cogs: 149000,
     createdAt: new Date(new Date().setDate(new Date().getDate() - 2)),
-    time: '18:45',
+
     items: {
       cart: [
         { name: 'Minyak Goreng 1L', qty: 2, price: 22000 },
@@ -77,7 +75,7 @@ const transactions = [
     amount: 324000,
     cogs: 228000,
     createdAt: new Date(new Date().setDate(new Date().getDate() - 1)),
-    time: '10:05',
+
     items: {
       cart: [
         { name: 'Beras 5kg', qty: 1, price: 55000 },
@@ -93,7 +91,7 @@ const transactions = [
     amount: 275000,
     cogs: 195000,
     createdAt: new Date(new Date().setDate(new Date().getDate() - 1)),
-    time: '14:00',
+
     items: {
       cart: [
         { name: 'Mi Instan Indomie', qty: 6, price: 5500 },
@@ -109,7 +107,7 @@ const transactions = [
     amount: 198000,
     cogs: 138000,
     createdAt: new Date(new Date().setDate(new Date().getDate() - 1)),
-    time: '19:30',
+
     items: {
       cart: [
         { name: 'Susu UHT 1L', qty: 1, price: 26000 },
@@ -125,7 +123,7 @@ const transactions = [
     amount: 295000,
     cogs: 210000,
     createdAt: new Date(),
-    time: '09:45',
+
     items: {
       cart: [
         { name: 'Mi Instan Indomie', qty: 3, price: 5500 },
@@ -141,7 +139,7 @@ const transactions = [
     amount: 322000,
     cogs: 229000,
     createdAt: new Date(),
-    time: '13:10',
+
     items: {
       cart: [
         { name: 'Beras 5kg', qty: 1, price: 55000 },
@@ -157,7 +155,7 @@ const transactions = [
     amount: 210000,
     cogs: 142000,
     createdAt: new Date(),
-    time: '18:10',
+
     items: {
       cart: [
         { name: 'Susu UHT 1L', qty: 1, price: 26000 },
@@ -226,7 +224,6 @@ async function main() {
           amount: transaction.amount,
           cogs: transaction.cogs,
           createdAt: transaction.createdAt,
-          time: transaction.time,
           items: transaction.items,
         },
       });

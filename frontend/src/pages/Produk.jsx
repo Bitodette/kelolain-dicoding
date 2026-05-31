@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { API_BASE } from '../utils/api';
+import { useToast } from "../components/Toast";
+import { useConfirm } from "../components/ConfirmDialog";
 import { PlusIcon, 
     MagnifyingGlassIcon, 
     FunnelIcon,
@@ -16,6 +18,8 @@ import { PlusIcon,
 import Pagination from "../components/Pagination";
 
 export default function Produk() {
+    const { addToast } = useToast();
+    const { confirm } = useConfirm();
     const [products, setProducts] = useState([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [loading, setLoading] = useState(true);
@@ -393,28 +397,30 @@ export default function Produk() {
 
     const handleCreateCategory = async () => {
         const trimmedName = String(newCategoryName || '').trim();
-        if (!trimmedName) return alert('Nama kategori wajib diisi');
+        if (!trimmedName) return addToast('Nama kategori wajib diisi', 'warning');
 
         try {
             await axios.post(`${API_BASE}/api/categories`, { name: trimmedName });
             setNewCategoryName('');
             fetchCategories();
+            addToast('Kategori berhasil dibuat', 'success');
         } catch (err) {
             console.error('Gagal membuat kategori:', err);
-            alert(err.response?.data?.error || 'Gagal membuat kategori.');
+            addToast(err.response?.data?.error || 'Gagal membuat kategori.', 'error');
         }
     };
 
     const handleDeleteCategory = async (id) => {
-        const confirmed = window.confirm('Hapus kategori ini? Produk yang memakai kategori akan tetap tersimpan tetapi kategori akan dilepas.');
+        const confirmed = await confirm('Hapus kategori ini? Produk yang memakai kategori akan tetap tersimpan tetapi kategori akan dilepas.', 'Hapus Kategori');
         if (!confirmed) return;
 
         try {
             await axios.delete(`${API_BASE}/api/categories/${id}`);
             fetchCategories();
+            addToast('Kategori berhasil dihapus', 'success');
         } catch (err) {
             console.error('Gagal menghapus kategori:', err);
-            alert(err.response?.data?.error || 'Gagal menghapus kategori.');
+            addToast(err.response?.data?.error || 'Gagal menghapus kategori.', 'error');
         }
     };
 
@@ -451,8 +457,9 @@ export default function Produk() {
             setFormData({ name: "", category: "", costPrice: "", price: "", stock: "" });
             fetchProducts(page);
         } catch (err) {
+            const msg = err.response?.data?.error || "Gagal menyimpan data produk.";
             console.error(editingProduct ? "Gagal mengupdate produk:" : "Gagal menambah produk:", err);
-            alert("Gagal menyimpan data produk.");
+            addToast(msg, 'error');
         }
     };
 
@@ -469,14 +476,15 @@ export default function Produk() {
     };
 
     const handleDelete = async (id, name) => {
-        const confirm = window.confirm(`Yakin ingin menghapus produk "${name}"?`);
-        if (confirm) {
+        const confirmed = await confirm(`Yakin ingin menghapus produk "${name}"?`, 'Hapus Produk');
+        if (confirmed) {
             try {
                 await axios.delete(`${API_BASE}/api/products/${id}`);
                 fetchProducts(page);
+                addToast('Produk berhasil dihapus', 'success');
             } catch (err) {
                 console.error("Gagal menghapus produk:", err);
-                alert("Gagal menghapus produk. Silakan coba lagi.");
+                addToast("Gagal menghapus produk. Silakan coba lagi.", 'error');
             }
         }
     };
@@ -495,11 +503,11 @@ export default function Produk() {
         const cost = Number(restockCost);
 
         if (!Number.isFinite(qty) || qty <= 0) {
-            return alert('Jumlah restock harus lebih besar dari 0');
+            return addToast('Jumlah restock harus lebih besar dari 0', 'warning');
         }
 
         if (!Number.isFinite(cost) || cost < 0) {
-            return alert('Harga modal valid tidak boleh negatif');
+            return addToast('Harga modal tidak boleh negatif', 'warning');
         }
 
         try {
@@ -511,9 +519,10 @@ export default function Produk() {
             setRestockQty("");
             setRestockCost("");
             fetchProducts(page);
+            addToast('Restock berhasil', 'success');
         } catch (err) {
             console.error("Gagal restock produk:", err);
-            alert("Gagal restock produk. Coba lagi.");
+            addToast("Gagal restock produk. Coba lagi.", 'error');
         }
     };
 
@@ -1027,13 +1036,14 @@ export default function Produk() {
                     scannedItems={scannedItems}
                     products={products}
                     categories={categories}
+                    addToast={addToast}
                     onConfirm={async (mappedItems) => {
                         console.log('Confirmed items:', mappedItems);
                         const firstValidItem = mappedItems.find(item => item.linkedProduct && item.quantity > 0);
 
                         try {
                             if (!firstValidItem) {
-                                alert('Produk berhasil diproses. Tidak ada item valid untuk direstock.');
+                                addToast('Tidak ada item valid untuk direstock.', 'info');
                                 fetchProducts(page);
                                 setIsScanResultModalOpen(false);
                                 return;
@@ -1041,7 +1051,7 @@ export default function Produk() {
 
                             if (!firstValidItem.linkedProduct?.id) {
                                 console.warn('Link product ID tidak tersedia, melewati restock.');
-                                alert('Produk berhasil diproses, tetapi stok tidak dapat diperbarui karena data tidak lengkap.');
+                                addToast('Stok tidak dapat diperbarui karena data tidak lengkap.', 'warning');
                                 fetchProducts(page);
                                 setIsScanResultModalOpen(false);
                                 return;
@@ -1052,11 +1062,11 @@ export default function Produk() {
                                 costPrice: firstValidItem.price,
                             });
 
-                            alert('Stok berhasil diperbarui.');
+                            addToast('Stok berhasil diperbarui.', 'success');
                             fetchProducts(page);
                         } catch (err) {
                             console.error("Gagal memperbarui stok dari hasil scan:", err);
-                            alert("Hasil pemrosesan produk sudah tersimpan, tetapi pembaruan stok gagal. Cek konsol untuk detail.");
+                            addToast("Pembaruan stok gagal. Cek konsol untuk detail.", 'error');
                         }
 
                         setIsScanResultModalOpen(false);
@@ -1068,7 +1078,7 @@ export default function Produk() {
 }
 
 
-function ScanResultModal({ isOpen, onClose, scannedItems, products, categories, onConfirm }) {
+function ScanResultModal({ isOpen, onClose, scannedItems, products, categories, onConfirm, addToast }) {
     const [mappedItems, setMappedItems] = useState([]);
 
     useEffect(() => {
@@ -1112,7 +1122,7 @@ function ScanResultModal({ isOpen, onClose, scannedItems, products, categories, 
                 // Create new product first
                 const { name, category, price } = item.newProductDetails;
                 if (!name || !price) {
-                    alert(`Harap lengkapi detail untuk produk baru: "${item.name}"`);
+                    addToast(`Harap lengkapi detail untuk produk baru: "${item.name}"`, 'warning');
                     return;
                 }
                 try {
@@ -1132,7 +1142,7 @@ function ScanResultModal({ isOpen, onClose, scannedItems, products, categories, 
                     });
                 } catch (err) {
                     console.error("Gagal membuat produk baru:", err);
-                    alert(`Gagal membuat produk baru: ${name}`);
+                    addToast(err.response?.data?.error || `Gagal membuat produk baru: ${name}`, 'error');
                     return;
                 }
             } else if (item.linkedProductId) {
@@ -1147,7 +1157,7 @@ function ScanResultModal({ isOpen, onClose, scannedItems, products, categories, 
             await onConfirm(itemsToProcess);
         } catch (err) {
             console.error("Gagal memproses hasil scan:", err);
-            alert("Gagal memproses hasil scan. Cek konsol untuk detail.");
+            addToast("Gagal memproses hasil scan.", 'error');
         }
     };
 

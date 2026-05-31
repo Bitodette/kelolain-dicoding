@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { API_BASE } from '../utils/api';
+import { useToast } from "../components/Toast";
 import { 
     MagnifyingGlassIcon, 
     TrashIcon, 
@@ -14,6 +15,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 export default function Kasir() {
+    const { addToast } = useToast();
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -137,12 +139,12 @@ export default function Kasir() {
                 },
             });
 
-            alert("Pembayaran berhasil diproses!");
+            addToast("Pembayaran berhasil diproses!", 'success');
             clearCart();
             fetchProducts(); // Refresh list agar stok sinkron
         } catch (err) {
             console.error("Gagal memproses pembayaran:", err);
-            alert("Gagal memproses pembayaran, coba lagi.");
+            addToast("Gagal memproses pembayaran, coba lagi.", 'error');
         }
     };
 

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { getStoredAuth } from '../utils/auth';
 import { API_BASE } from '../utils/api';
+import { useToast } from "../components/Toast";
+import { useConfirm } from "../components/ConfirmDialog";
 import { PlusIcon, TrashIcon, PencilSquareIcon, CheckIcon } from "@heroicons/react/24/outline";
 
 const pageOptions = [
@@ -47,6 +49,8 @@ function Section({ title, desc, open, onToggle, children }) {
 }
 
 export default function Settings() {
+  const { addToast } = useToast();
+  const { confirm } = useConfirm();
   const [openSection, setOpenSection] = useState('roles');
   const [roles, setRoles] = useState([]);
   const [users, setUsers] = useState([]);
@@ -58,12 +62,6 @@ export default function Settings() {
   const [editingUser, setEditingUser] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [currentUserRoleNames, setCurrentUserRoleNames] = useState([]);
-  const [successMessage, setSuccessMessage] = useState('');
-
-  const showSuccess = (msg) => {
-    setSuccessMessage(msg);
-    setTimeout(() => setSuccessMessage(''), 3000);
-  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -97,27 +95,27 @@ export default function Settings() {
   };
 
   const handleCreateRole = async () => {
-    if (!newRoleName.trim()) return alert('Nama role wajib diisi');
+    if (!newRoleName.trim()) return addToast('Nama role wajib diisi', 'warning');
     try {
       await axios.post(`${API_BASE}/api/roles`, { name: newRoleName.trim(), pages: newRolePages });
       setNewRoleName('');
       setNewRolePages([]);
-      showSuccess('Role berhasil ditambahkan');
+      addToast('Role berhasil ditambahkan', 'success');
       fetchData();
     } catch (err) {
-      alert(err.response?.data?.error || 'Gagal membuat role.');
+      addToast(err.response?.data?.error || 'Gagal membuat role.', 'error');
     }
   };
 
   const handleDeleteRole = async (id) => {
-    const confirmed = window.confirm('Hapus role ini?');
+    const confirmed = await confirm('Hapus role ini?', 'Hapus Role');
     if (!confirmed) return;
     try {
       await axios.delete(`${API_BASE}/api/roles/${id}`);
-      showSuccess('Role berhasil dihapus');
+      addToast('Role berhasil dihapus', 'success');
       fetchData();
     } catch (err) {
-      alert(err.response?.data?.error || 'Gagal menghapus role.');
+      addToast(err.response?.data?.error || 'Gagal menghapus role.', 'error');
     }
   };
 
@@ -151,9 +149,9 @@ export default function Settings() {
   };
 
   const handleSaveUser = async () => {
-    if (!newUser.username.trim()) return alert('Username wajib diisi');
-    if (!editingUser && !newUser.password.trim()) return alert('Password wajib diisi');
-    if (newUser.roleIds.length === 0) return alert('Pengguna harus memiliki minimal 1 role');
+    if (!newUser.username.trim()) return addToast('Username wajib diisi', 'warning');
+    if (!editingUser && !newUser.password.trim()) return addToast('Password wajib diisi', 'warning');
+    if (newUser.roleIds.length === 0) return addToast('Pengguna harus memiliki minimal 1 role', 'warning');
 
     try {
       if (editingUser) {
@@ -165,7 +163,7 @@ export default function Settings() {
         };
         if (newUser.password.trim()) payload.password = newUser.password.trim();
         await axios.put(`${API_BASE}/api/users/${editingUser.id}`, payload);
-        showSuccess('Pengguna berhasil diperbarui');
+        addToast('Pengguna berhasil diperbarui', 'success');
       } else {
         await axios.post(`${API_BASE}/api/users`, {
           username: newUser.username.trim(),
@@ -174,35 +172,29 @@ export default function Settings() {
           roleIds: newUser.roleIds,
           active: newUser.active,
         });
-        showSuccess('Pengguna berhasil ditambahkan');
+        addToast('Pengguna berhasil ditambahkan', 'success');
       }
       resetUserForm();
       fetchData();
     } catch (err) {
-      alert(err.response?.data?.error || 'Gagal menyimpan pengguna.');
+      addToast(err.response?.data?.error || 'Gagal menyimpan pengguna.', 'error');
     }
   };
 
   const handleDeleteUser = async (id, username) => {
-    const confirmed = window.confirm(`Hapus pengguna "${username}"?`);
+    const confirmed = await confirm(`Hapus pengguna "${username}"?`, 'Hapus Pengguna');
     if (!confirmed) return;
     try {
       await axios.delete(`${API_BASE}/api/users/${id}`);
-      showSuccess('Pengguna berhasil dihapus');
+      addToast('Pengguna berhasil dihapus', 'success');
       fetchData();
     } catch (err) {
-      alert(err.response?.data?.error || 'Gagal menghapus pengguna.');
+      addToast(err.response?.data?.error || 'Gagal menghapus pengguna.', 'error');
     }
   };
 
   return (
     <div className="pt-4 sm:pt-8 pb-12 max-w-7xl mx-auto space-y-4">
-      {successMessage && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3.5 text-sm font-semibold text-emerald-800">
-          {successMessage}
-        </div>
-      )}
-
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-3.5 text-sm text-red-700">
           {error}

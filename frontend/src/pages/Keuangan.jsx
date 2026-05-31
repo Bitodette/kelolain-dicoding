@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
+import { useToast } from "../components/Toast";
+import { useConfirm } from "../components/ConfirmDialog";
 import { 
     SparklesIcon, 
     ChevronDownIcon, 
@@ -8,7 +10,10 @@ import {
     PencilSquareIcon,
     TrashIcon,
     EyeIcon,
-    XMarkIcon
+    XMarkIcon,
+    BanknotesIcon,
+    ArrowTrendingUpIcon,
+    ArrowTrendingDownIcon
 } from "@heroicons/react/24/outline";
 import {
     ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell,
@@ -41,6 +46,8 @@ function formatRangeHint(selectedPeriod, startDate, endDate) {
 }
 
 export default function Keuangan() {
+    const { addToast } = useToast();
+    const { confirm } = useConfirm();
     const [selectedPeriod, setSelectedPeriod] = useState("Bulan ini");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
@@ -65,6 +72,7 @@ export default function Keuangan() {
     const [financeTrendData, setFinanceTrendData] = useState([]);
     const [expenseBreakdown, setExpenseBreakdown] = useState([]);
     const [totals, setTotals] = useState({ pemasukan: 0, pengeluaran: 0, keuntunganBersih: 0 });
+    const [comparison, setComparison] = useState(null);
     const [availability, setAvailability] = useState({
         week: { count: 0 },
         month: { count: 0 },
@@ -124,6 +132,7 @@ export default function Keuangan() {
             setFinanceTrendData(Array.isArray(data.trend) ? data.trend : []);
             setExpenseBreakdown(Array.isArray(data.expenseBreakdown) ? data.expenseBreakdown : []);
             setTotals(data.totals || { pemasukan: 0, pengeluaran: 0, keuntunganBersih: 0 });
+            setComparison(data.comparison || null);
             setAvailability(data.availability || { week: { count: 0 }, month: { count: 0 }, year: { count: 0 }, all: { count: 0 } });
 
             const effectiveLabel = apiToPeriod[data.effectivePeriod];
@@ -246,7 +255,7 @@ export default function Keuangan() {
             });
         } catch (error) {
             console.error("Gagal menyimpan transaksi", error);
-            alert("Terjadi kesalahan saat menyimpan transaksi.");
+            addToast("Terjadi kesalahan saat menyimpan transaksi.", 'error');
         }
     };
 
@@ -308,20 +317,20 @@ export default function Keuangan() {
 
     // --- HAPUS TRANSAKSI DARI DB ---
     const handleDeleteTransaction = async (id, label) => {
-        const confirmDelete = window.confirm(`Yakin ingin menghapus riwayat "${label}"?`);
-        if (confirmDelete) {
+        const confirmed = await confirm(`Yakin ingin menghapus riwayat "${label}"?`, 'Hapus Transaksi');
+        if (confirmed) {
             try {
                 await axios.delete(`${API_BASE}/api/transactions/${id}`);
-                // Update UI Optimistik
                 setTransactions(prev => prev.filter(t => t.id !== id));
                 fetchFinanceOverview({
                     period: periodToApi[selectedPeriod] || "month",
                     start: selectedPeriod === "Custom" ? startDate : undefined,
                     end: selectedPeriod === "Custom" ? endDate : undefined,
                 });
+                addToast('Transaksi berhasil dihapus', 'success');
             } catch (error) {
                 console.error("Gagal menghapus transaksi", error);
-                alert("Gagal menghapus transaksi.");
+                addToast("Gagal menghapus transaksi.", 'error');
             }
         }
     };
@@ -349,6 +358,8 @@ export default function Keuangan() {
     const keuntunganBersih = totals.keuntunganBersih || 0;
     const prediksiKasAI_7Hari = revenuePrediction7Day;
 
+    const periodLabel = selectedPeriod === "Minggu ini" ? "minggu lalu" : selectedPeriod === "Bulan ini" ? "bulan lalu" : selectedPeriod === "Tahun ini" ? "tahun lalu" : null;
+
     const currentExpenseBreakdown = useMemo(() => expenseBreakdown, [expenseBreakdown]);
 
     const hasTrendData = useMemo(() => {
@@ -375,11 +386,6 @@ export default function Keuangan() {
         const t = String(type || "").toLowerCase().trim();
         return t === "masuk" || t === "pemasukan" || t === "income";
     };
-
-    const cleanProfitTextClass = ( keuntunganBersih < 0 ? 
-        "mt-1 text-2xl font-bold text-red-600" :
-        "mt-1 text-2xl font-bold text-emerald-600"
-    );
 
     return (
         <div className="flex flex-col gap-4 relative">
@@ -436,25 +442,85 @@ export default function Keuangan() {
 
             {/* --- KARTU METRIK --- */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                <div className="p-4 border-2 border-[#E6E8EC] rounded-xl bg-white">
-                    <p className="text-xs font-medium text-[#6B7280]">Pemasukan</p>
-                    <p className="mt-1 text-2xl font-bold text-[#23262F]">Rp {totalPemasukan.toLocaleString("id-ID")}</p>
-                </div>
-                <div className="p-4 border-2 border-[#E6E8EC] rounded-xl bg-white">
-                    <p className="text-xs font-medium text-[#6B7280]">Pengeluaran</p>
-                    <p className="mt-1 text-2xl font-bold text-[#23262F]">Rp {totalPengeluaran.toLocaleString("id-ID")}</p>
-                </div>
-                <div className="p-4 border-2 border-[#E6E8EC] rounded-xl bg-white">
-                    <p className="text-xs font-medium text-[#6B7280]">Keuntungan Bersih</p>
-                    <p className={cleanProfitTextClass}>Rp {keuntunganBersih.toLocaleString("id-ID")}</p>
-                </div>
-                
-                <div className="relative overflow-hidden p-4 border-2 border-[#E6E8EC] rounded-xl bg-gradient-to-br from-[#EEF2FF] to-white flex flex-col justify-center">
-                    <div className="flex items-center gap-1.5 z-10">
-                        <SparklesIcon className="h-4 w-4 text-[#2936C4]" />
-                        <p className="text-xs font-bold text-[#2936C4]">Prediksi Penghasilan Kotor 7 Hari</p>
+                <div className="p-4 sm:p-5 border-2 border-[#E6E8EC] rounded-xl bg-white flex flex-col gap-2.5">
+                    <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-lg bg-indigo-50">
+                            <ArrowTrendingUpIcon className="w-4 h-4 text-[#2936C4]" />
+                        </div>
+                        <p className="text-xs font-semibold text-[#6B7280]">Pemasukan</p>
                     </div>
-                    <p className="mt-1.5 text-2xl font-black text-[#23262F] z-10">
+                    <p className="text-2xl font-bold text-[#23262F]">Rp {totalPemasukan.toLocaleString("id-ID")}</p>
+                    {comparison?.pemasukan?.previous > 0 && (
+                        <div className="flex items-center gap-1.5 text-xs">
+                            {comparison.pemasukan.change > 0 ? (
+                                <ArrowTrendingUpIcon className="w-3.5 h-3.5 text-emerald-500" />
+                            ) : (
+                                <ArrowTrendingDownIcon className="w-3.5 h-3.5 text-red-500" />
+                            )}
+                            <span className={comparison.pemasukan.change > 0 ? "font-semibold text-emerald-600" : "font-semibold text-red-500"}>
+                                {Math.abs(comparison.pemasukan.change)}%
+                            </span>
+                            <span className="text-[#8B95A7]">vs {periodLabel}</span>
+                        </div>
+                    )}
+                </div>
+
+                <div className="p-4 sm:p-5 border-2 border-[#E6E8EC] rounded-xl bg-white flex flex-col gap-2.5">
+                    <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-lg bg-rose-50">
+                            <ArrowTrendingDownIcon className="w-4 h-4 text-rose-500" />
+                        </div>
+                        <p className="text-xs font-semibold text-[#6B7280]">Pengeluaran</p>
+                    </div>
+                    <p className="text-2xl font-bold text-[#23262F]">Rp {totalPengeluaran.toLocaleString("id-ID")}</p>
+                    {comparison?.pengeluaran?.previous > 0 && (
+                        <div className="flex items-center gap-1.5 text-xs">
+                            {comparison.pengeluaran.change > 0 ? (
+                                <ArrowTrendingUpIcon className="w-3.5 h-3.5 text-red-500" />
+                            ) : (
+                                <ArrowTrendingDownIcon className="w-3.5 h-3.5 text-emerald-500" />
+                            )}
+                            <span className={comparison.pengeluaran.change > 0 ? "font-semibold text-red-500" : "font-semibold text-emerald-600"}>
+                                {Math.abs(comparison.pengeluaran.change)}%
+                            </span>
+                            <span className="text-[#8B95A7]">vs {periodLabel}</span>
+                        </div>
+                    )}
+                </div>
+
+                <div className="p-4 sm:p-5 border-2 border-[#E6E8EC] rounded-xl bg-white flex flex-col gap-2.5">
+                    <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-lg bg-emerald-50">
+                            <BanknotesIcon className="w-4 h-4 text-emerald-600" />
+                        </div>
+                        <p className="text-xs font-semibold text-[#6B7280]">Keuntungan Bersih</p>
+                    </div>
+                    <p className={`text-2xl font-bold ${keuntunganBersih < 0 ? "text-red-600" : "text-emerald-600"}`}>
+                        Rp {keuntunganBersih.toLocaleString("id-ID")}
+                    </p>
+                    {comparison?.keuntunganBersih?.previous > 0 && (
+                        <div className="flex items-center gap-1.5 text-xs">
+                            {comparison.keuntunganBersih.change > 0 ? (
+                                <ArrowTrendingUpIcon className="w-3.5 h-3.5 text-emerald-500" />
+                            ) : (
+                                <ArrowTrendingDownIcon className="w-3.5 h-3.5 text-red-500" />
+                            )}
+                            <span className={comparison.keuntunganBersih.change > 0 ? "font-semibold text-emerald-600" : "font-semibold text-red-500"}>
+                                {Math.abs(comparison.keuntunganBersih.change)}%
+                            </span>
+                            <span className="text-[#8B95A7]">vs {periodLabel}</span>
+                        </div>
+                    )}
+                </div>
+
+                <div className="relative overflow-hidden p-4 sm:p-5 border-2 border-[#E6E8EC] rounded-xl bg-gradient-to-br from-[#EEF2FF] to-white flex flex-col gap-2.5">
+                    <div className="flex items-center gap-2 z-10">
+                        <div className="p-2 rounded-lg bg-indigo-100">
+                            <SparklesIcon className="w-4 h-4 text-[#2936C4]" />
+                        </div>
+                        <p className="text-xs font-bold text-[#2936C4]">Prediksi Penghasilan Kotor</p>
+                    </div>
+                    <p className="text-2xl font-black text-[#23262F] z-10">
                         {isRevenuePredictionLoading ? (
                             <span className="text-[#8B95A7]">Memuat...</span>
                         ) : prediksiKasAI_7Hari === null ? (
@@ -463,8 +529,8 @@ export default function Keuangan() {
                             <>Rp {prediksiKasAI_7Hari.toLocaleString("id-ID")}</>
                         )}
                     </p>
-                    <p className="text-[9px] font-medium text-[#8B95A7] mt-1 z-10">
-                        {isRevenuePredictionLoading ? "Memuat prediksi AI..." : prediksiKasAI_7Hari === null ? "Prediksi tidak tersedia karena data belum cukup." : "Estimasi berdasarkan model AI revenue insight."}
+                    <p className="text-[10px] font-medium text-[#8B95A7] z-10 leading-relaxed">
+                        {isRevenuePredictionLoading ? "Memuat prediksi AI..." : prediksiKasAI_7Hari === null ? "Prediksi tidak tersedia karena data belum cukup 3 hari." : "Estimasi 7 hari ke depan berdasarkan model AI."}
                     </p>
                     <SparklesIcon className="absolute -bottom-2 -right-2 h-16 w-16 text-[#2936C4] opacity-5 pointer-events-none" />
                 </div>

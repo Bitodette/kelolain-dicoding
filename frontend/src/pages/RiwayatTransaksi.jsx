@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { useToast } from "../components/Toast";
+import { useConfirm } from "../components/ConfirmDialog";
 import { 
     TrashIcon,
     PencilSquareIcon,
@@ -12,6 +14,8 @@ import { API_BASE } from '../utils/api';
 import Pagination from "../components/Pagination";
 
 export default function RiwayatTransaksi() {
+    const { addToast } = useToast();
+    const { confirm } = useConfirm();
     const isIncomeType = (type) => {
         const t = String(type || "").toLowerCase().trim();
         return t === "masuk" || t === "pemasukan" || t === "income";
@@ -92,14 +96,15 @@ export default function RiwayatTransaksi() {
     }, [searchQuery, filterType]);
 
     const handleDeleteTransaction = async (id, label) => {
-        const confirmDelete = window.confirm(`Yakin ingin menghapus riwayat "${label}"?`);
-        if (confirmDelete) {
+        const confirmed = await confirm(`Yakin ingin menghapus riwayat "${label}"?`, 'Hapus Transaksi');
+        if (confirmed) {
             try {
                 await axios.delete(`${API_BASE}/api/transactions/${id}`);
                 fetchTransactions(page);
+                addToast('Transaksi berhasil dihapus', 'success');
             } catch (error) {
                 console.error("Gagal menghapus transaksi", error);
-                alert("Gagal menghapus transaksi.");
+                addToast("Gagal menghapus transaksi.", 'error');
             }
         }
     };
@@ -136,7 +141,7 @@ export default function RiwayatTransaksi() {
             fetchTransactions(page);
         } catch (error) {
             console.error("Gagal memperbarui transaksi", error);
-            alert("Gagal memperbarui transaksi.");
+            addToast("Gagal memperbarui transaksi.", 'error');
         }
     };
 

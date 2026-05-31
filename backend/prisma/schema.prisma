@@ -111,7 +111,6 @@ model transactions {
   amount    Int
   cogs      Int      @default(0)
   createdAt DateTime @default(now())
-  time      String?  @db.VarChar(50)
   items     Json?
 
   @@index([organizationId, type, createdAt])

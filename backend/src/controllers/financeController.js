@@ -100,10 +100,64 @@ exports.getFinanceOverview = asyncHandler(async (req, res) => {
     }
     const projection7d = last7.length >= 2 ? Math.round(net7) : null;
 
+    // --- komparasi periode sebelumnya ---
+    const computeChange = (curr, prev) => {
+        if (prev === 0) return curr > 0 ? { change: 100, previous: 0 } : { change: 0, previous: 0 };
+        return { change: Math.round(((curr - prev) / prev) * 1000) / 10, previous };
+    };
+
+    let prevRange = null;
+    if (effectivePeriod === 'week') {
+        const prevStart = new Date(range.start);
+        prevStart.setDate(range.start.getDate() - 7);
+        const prevEnd = new Date(prevStart);
+        prevEnd.setDate(prevStart.getDate() + 6);
+        prevRange = { start: startOfDay(prevStart), end: endOfDay(prevEnd) };
+    } else if (effectivePeriod === 'month') {
+        const prevStart = new Date(range.start);
+        prevStart.setMonth(range.start.getMonth() - 1);
+        const prevEnd = new Date(range.start);
+        prevEnd.setDate(0);
+        prevRange = { start: startOfDay(prevStart), end: endOfDay(prevEnd) };
+    } else if (effectivePeriod === 'year') {
+        const prevStart = new Date(range.start);
+        prevStart.setFullYear(range.start.getFullYear() - 1);
+        const prevEnd = new Date(range.start);
+        prevEnd.setDate(0);
+        prevRange = { start: startOfDay(prevStart), end: endOfDay(prevEnd) };
+    }
+
+    let comparison = null;
+    if (prevRange) {
+        const prevTx = await prisma.transactions.findMany({
+            where: { organizationId: req.user.organizationId, createdAt: { gte: prevRange.start, lte: prevRange.end } },
+        });
+
+        let prevPemasukan = 0, prevPengeluaran = 0, prevKeuntunganBersih = 0;
+        for (const t of prevTx) {
+            const amt = Number(t.amount) || 0;
+            const ty = String(t.type || '').toLowerCase().trim();
+            if (ty === 'masuk' || ty === 'pemasukan' || ty === 'income') {
+                prevPemasukan += amt;
+                prevKeuntunganBersih += amt;
+            }
+            if (ty === 'keluar' || ty === 'pengeluaran' || ty === 'expense') {
+                prevPengeluaran += amt;
+                prevKeuntunganBersih -= amt;
+            }
+        }
+
+        comparison = {
+            pemasukan: computeChange(pemasukan, prevPemasukan),
+            pengeluaran: computeChange(pengeluaran, prevPengeluaran),
+            keuntunganBersih: computeChange(keuntunganBersih, prevKeuntunganBersih),
+        };
+    }
+
     res.json({
         requestedPeriod: period, effectivePeriod, isFallback: false,
         range: { start: range.start.toISOString(), end: range.end.toISOString() },
         totals: { pemasukan, pengeluaran, keuntunganBersih },
-        projection7d, trend, expenseBreakdown: breakdown, availability, transactionCount: tx.length,
+        comparison, projection7d, trend, expenseBreakdown: breakdown, availability, transactionCount: tx.length,
     });
 });

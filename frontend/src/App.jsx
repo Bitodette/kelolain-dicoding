@@ -3,6 +3,8 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { ToastProvider } from "./components/Toast";
+import { ConfirmProvider } from "./components/ConfirmDialog";
 import Dashboard from "./pages/Dashboard";
 import Keuangan from "./pages/Keuangan";
 import RiwayatTransaksi from "./pages/RiwayatTransaksi";
@@ -181,6 +183,8 @@ function App() {
   }
 
   return (
+    <ToastProvider>
+    <ConfirmProvider>
     <div className="max-w-[1920px] w-full flex min-h-screen bg-white font-sans text-gray-900">
       {isAuthenticated && (
         <Sidebar activeTab={activeTab} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} allowedPages={allowedPages} />
@@ -273,6 +277,8 @@ function App() {
         />
       )}
     </div>
+    </ConfirmProvider>
+    </ToastProvider>
   );
 }
 

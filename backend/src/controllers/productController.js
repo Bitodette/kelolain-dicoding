@@ -34,6 +34,11 @@ exports.createProduct = asyncHandler(async (req, res) => {
     const selectedCategoryId = Number.isFinite(Number(categoryId)) ? parseInt(categoryId, 10) : null;
     let categoryName = String(category || '').trim() || null;
 
+    const existingProduct = await prisma.product.findFirst({ where: { name, organizationId: orgId } });
+    if (existingProduct) {
+        return res.status(409).json({ error: 'Produk dengan nama tersebut sudah ada.' });
+    }
+
     if (selectedCategoryId) {
         const categoryRecord = await prisma.category.findFirst({ where: { id: selectedCategoryId, organizationId: orgId } });
         if (categoryRecord) categoryName = categoryRecord.name;
@@ -85,6 +90,13 @@ exports.updateProduct = asyncHandler(async (req, res) => {
     const orgId = req.user.organizationId;
     const existingProduct = await prisma.product.findFirst({ where: { id, organizationId: orgId } });
     if (!existingProduct) return res.status(404).json({ error: 'Produk tidak ditemukan' });
+
+    if (name && name !== existingProduct.name) {
+        const duplicate = await prisma.product.findFirst({ where: { name, organizationId: orgId, id: { not: id } } });
+        if (duplicate) {
+            return res.status(409).json({ error: 'Produk dengan nama tersebut sudah ada.' });
+        }
+    }
 
     const parsedCost = Number.isFinite(Number(costPrice)) ? parseInt(costPrice, 10) : existingProduct.costPrice;
     const parsedPrice = Number.isFinite(Number(price)) ? parseInt(price, 10) : existingProduct.price;
