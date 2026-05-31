@@ -82,11 +82,16 @@ export default function Insight() {
     const hasRevenueForecastData = validRevenueForecast.length >= 3 && validRevenueForecast.some((value) => Number(value) !== 0);
     const lastRevenue = hasRevenueForecastData ? validRevenueForecast[validRevenueForecast.length - 1] : null;
     const topRisk = demandTop5.length > 0 ? demandTop5[0] : null;
+    const shortDays = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
     const revenueChartData = hasRevenueForecastData
-        ? validRevenueForecast.map((value, index) => ({
-              hari: `Hari ${index + 1}`,
-              omzet: Number(value) || 0,
-          }))
+        ? validRevenueForecast.map((value, index) => {
+              const d = new Date();
+              d.setDate(d.getDate() + index);
+              return {
+                  hari: shortDays[d.getDay()],
+                  omzet: Number(value) || 0,
+              };
+          })
         : [];
 
     const bundlingRows = useMemo(

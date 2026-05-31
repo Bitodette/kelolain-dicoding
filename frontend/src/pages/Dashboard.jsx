@@ -225,13 +225,8 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    <div className="mb-2 flex items-center justify-between text-xs text-gray-500 md:hidden">
-                        <span>Geser ke samping untuk lihat grafik</span>
-                        <span>↔ Slider</span>
-                    </div>
-
-                    <div className="overflow-x-auto pb-2 md:overflow-visible flex-1">
-                        <div className="h-72 min-w-[560px] w-full md:min-w-0">
+                    <div className="flex-1">
+                        <div className="h-72 w-full">
                             {isFinanceLoading ? (
                                 <div className="h-full w-full flex items-center justify-center text-sm text-[#8B95A7]">Memuat grafik...</div>
                             ) : financeError ? (
