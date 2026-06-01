@@ -24,16 +24,16 @@ const expenseColors = ["#2936C4", "#66D3CC", "#98A81D", "#CBD5E1"];
 import { API_BASE } from '../utils/api';
 
 const periodToApi = {
-    "Minggu ini": "week",
-    "Bulan ini": "month",
+    "7 Hari Terakhir": "week",
+    "30 Hari Terakhir": "month",
     "Tahun ini": "year",
     "Semua": "all",
     "Custom": "custom",
 };
 
 const apiToPeriod = {
-    week: "Minggu ini",
-    month: "Bulan ini",
+    week: "7 Hari Terakhir",
+    month: "30 Hari Terakhir",
     year: "Tahun ini",
     all: "Semua",
     custom: "Custom",
@@ -48,7 +48,7 @@ function formatRangeHint(selectedPeriod, startDate, endDate) {
 export default function Keuangan() {
     const { addToast } = useToast();
     const { confirm } = useConfirm();
-    const [selectedPeriod, setSelectedPeriod] = useState("Bulan ini");
+    const [selectedPeriod, setSelectedPeriod] = useState("30 Hari Terakhir");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [hasUserPickedPeriod, setHasUserPickedPeriod] = useState(false);
@@ -358,7 +358,7 @@ export default function Keuangan() {
     const keuntunganBersih = totals.keuntunganBersih || 0;
     const prediksiKasAI_7Hari = revenuePrediction7Day;
 
-    const periodLabel = selectedPeriod === "Minggu ini" ? "minggu lalu" : selectedPeriod === "Bulan ini" ? "bulan lalu" : selectedPeriod === "Tahun ini" ? "tahun lalu" : null;
+    const periodLabel = selectedPeriod === "7 Hari Terakhir" ? "7 hari sebelumnya" : selectedPeriod === "30 Hari Terakhir" ? "30 hari sebelumnya" : selectedPeriod === "Tahun ini" ? "tahun lalu" : null;
 
     const currentExpenseBreakdown = useMemo(() => expenseBreakdown, [expenseBreakdown]);
 
@@ -371,8 +371,10 @@ export default function Keuangan() {
     }, []);
 
     const formatYAxis = (value) => {
-        if (value >= 1000000) return `${(value / 1000000).toLocaleString("id-ID", { maximumFractionDigits: 1 })}jt`;
-        if (value >= 1000) return `${(value / 1000).toLocaleString("id-ID")}rb`;
+        const abs = Math.abs(value);
+        const sign = value < 0 ? '-' : '';
+        if (abs >= 1000000) return `${sign}${(abs / 1000000).toLocaleString("id-ID", { maximumFractionDigits: 1 })}jt`;
+        if (abs >= 1000) return `${sign}${(abs / 1000).toLocaleString("id-ID")}rb`;
         return value;
     };
 
@@ -424,7 +426,7 @@ export default function Keuangan() {
                         {isPeriodOpen && (
                             <div className="absolute mt-2 sm:right-0 w-44 bg-white border border-[#E6E8EC] rounded-xl shadow-lg z-40">
                                 <ul className="p-2">
-                                    {['Minggu ini', 'Bulan ini', 'Tahun ini', 'Semua'].map((option) => (
+                                    {['7 Hari Terakhir', '30 Hari Terakhir', 'Tahun ini', 'Semua'].map((option) => (
                                         <li key={option}>
                                             <button
                                                 type="button"
@@ -560,7 +562,7 @@ export default function Keuangan() {
                             <ResponsiveContainer width="100%" height="100%">
                                 <LineChart key={selectedPeriod} data={financeTrendData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                                     <CartesianGrid stroke="#EEF0F3" vertical={false} />
-                                    <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "#8B95A7", fontSize: 11 }} />
+                                    <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "#8B95A7", fontSize: 11 }} interval="preserveStartEnd" />
                                     <YAxis axisLine={false} tickLine={false} tick={{ fill: "#8B95A7", fontSize: 11 }} width={45} tickFormatter={formatYAxis} />
                                     <Tooltip formatter={(value, name) => [`Rp ${Number(value || 0).toLocaleString("id-ID")}`, formatTooltipName(name)]} contentStyle={{ borderRadius: "12px", border: "1px solid #E6E8EC", fontSize: "12px" }} />
                                     <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ paddingTop: 15, fontSize: 11 }} />

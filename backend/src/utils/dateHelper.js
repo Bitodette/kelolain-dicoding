@@ -27,19 +27,15 @@ function formatIdMonth(date) {
 }
 
 function getWeekRange(now = new Date()) {
-    const day = now.getDay();
-    const diffToMonday = (day + 6) % 7;
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - diffToMonday);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    return { start: startOfDay(monday), end: endOfDay(sunday) };
+    const start = new Date(now);
+    start.setDate(now.getDate() - 6);
+    return { start: startOfDay(start), end: endOfDay(now) };
 }
 
 function getMonthRange(now = new Date()) {
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    return { start: startOfDay(start), end: endOfDay(end) };
+    const start = new Date(now);
+    start.setDate(now.getDate() - 29);
+    return { start: startOfDay(start), end: endOfDay(now) };
 }
 
 function getYearRange(now = new Date()) {

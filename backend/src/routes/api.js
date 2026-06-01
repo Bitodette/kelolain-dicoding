@@ -10,6 +10,7 @@ const authController = require('../controllers/authController');
 const categoryController = require('../controllers/categoryController');
 const roleController = require('../controllers/roleController');
 const userController = require('../controllers/userController');
+const notificationController = require('../controllers/notificationController');
 const { authenticate } = require('../middlewares/authMiddleware');
 const multer = require('multer');
 
@@ -70,5 +71,10 @@ router.get('/ai/demand', authenticate, aiController.getDemandPrediction);
 router.get('/ai/bundling', authenticate, aiController.getBundlingSuggestion);
 router.post('/ai/ocr/check-blur', authenticate, upload.single('receipt'), aiController.checkReceiptBlur);
 router.post('/ai/ocr/scan', authenticate, upload.single('receipt'), aiController.scanReceipt);
+
+// ROUTES NOTIFIKASI
+router.get('/notifications', authenticate, notificationController.getNotifications);
+router.patch('/notifications/:id/read', authenticate, notificationController.markRead);
+router.patch('/notifications/read-all', authenticate, notificationController.markAllRead);
 
 module.exports = router;

@@ -16,6 +16,7 @@ model Organization {
   categories Category[]
   roles     Role[]
   transactions transactions[]
+  notifications Notification[]
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
@@ -115,4 +116,20 @@ model transactions {
 
   @@index([organizationId, type, createdAt])
   @@map("transactions")
+}
+
+model Notification {
+  id             Int          @id @default(autoincrement())
+  organizationId Int          @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  type           String       @default("low_stock") @db.VarChar(50)
+  text           String       @db.VarChar(500)
+  link           String?      @db.VarChar(255)
+  read           Boolean      @default(false)
+  productId      Int?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId, read])
+  @@map("notifications")
 }

@@ -93,44 +93,8 @@ function App() {
 
     const fetchNotifs = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/api/products`);
-        const products = Array.isArray(res.data) ? res.data : [];
-        const threshold = 5;
-        const lowStock = products
-          .filter((p) => (Number(p.stock) || 0) <= threshold)
-          .sort((a, b) => (Number(a.stock) || 0) - (Number(b.stock) || 0));
-
-        if (!mounted) return;
-
-        const readIds = new Set(JSON.parse(localStorage.getItem("readNotifs") || "[]"));
-
-        setNotifications((current) => {
-          const existing = new Map(current.map((n) => [n.id, n]));
-          let changed = false;
-
-          lowStock.forEach((p) => {
-            const id = `low-stock-${p.id}`;
-            if (!existing.has(id)) {
-              existing.set(id, {
-                id,
-                text: `Stok "${p.name}" tersisa ${p.stock} pcs`,
-                read: readIds.has(id),
-                link: "/produk",
-              });
-              changed = true;
-            }
-          });
-
-          const currentIds = new Set(lowStock.map((p) => `low-stock-${p.id}`));
-          for (const [id] of existing) {
-            if (id.startsWith("low-stock-") && !currentIds.has(id)) {
-              existing.delete(id);
-              changed = true;
-            }
-          }
-
-          return changed ? Array.from(existing.values()) : current;
-        });
+        const res = await axios.get(`${API_BASE}/api/notifications`);
+        if (mounted) setNotifications(Array.isArray(res.data) ? res.data : []);
       } catch (e) {
         console.error("Gagal mengambil notifikasi:", e);
       }
@@ -145,22 +109,22 @@ function App() {
     };
   }, [isAuthenticated]);
 
-  const markNotificationRead = useCallback((id) => {
-    setNotifications((prev) => {
-      const readIds = new Set(JSON.parse(localStorage.getItem("readNotifs") || "[]"));
-      readIds.add(id);
-      localStorage.setItem("readNotifs", JSON.stringify([...readIds]));
-      return prev.map((n) => (n.id === id ? { ...n, read: true } : n));
-    });
+  const markNotificationRead = useCallback(async (id) => {
+    try {
+      await axios.patch(`${API_BASE}/api/notifications/${id}/read`);
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    } catch (e) {
+      console.error("Gagal menandai notifikasi:", e);
+    }
   }, []);
 
-  const markAllNotificationsRead = useCallback(() => {
-    setNotifications((prev) => {
-      const readIds = new Set(JSON.parse(localStorage.getItem("readNotifs") || "[]"));
-      prev.forEach((n) => readIds.add(n.id));
-      localStorage.setItem("readNotifs", JSON.stringify([...readIds]));
-      return prev.map((n) => ({ ...n, read: true }));
-    });
+  const markAllNotificationsRead = useCallback(async () => {
+    try {
+      await axios.patch(`${API_BASE}/api/notifications/read-all`);
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    } catch (e) {
+      console.error("Gagal menandai semua notifikasi:", e);
+    }
   }, []);
 
   const handleLogin = (authData) => {

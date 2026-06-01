@@ -30,7 +30,7 @@ const apiLimiter = rateLimit({
 app.use('/api', apiLimiter);
 
 app.get('/', (req, res) => {
-    res.send('API Kelola.in berjalan mantap!');
+    res.send('API is running');
 });
 
 app.use('/api', apiRoutes);
@@ -38,7 +38,7 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
-    console.log(`Server berjalan di port ${PORT}`);
+    console.log(`Server is running`);
 });
 
 process.on('SIGINT', async () => {

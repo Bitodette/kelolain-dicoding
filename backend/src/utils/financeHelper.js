@@ -49,17 +49,23 @@ function buildTrend({ period, start, end, transactions }) {
     }
 
     if (period === 'month') {
-        const buckets = Array.from({ length: 4 }, (_, idx) => ({
-            key: String(idx + 1),
-            label: `M${idx + 1}`,
-            pemasukan: 0,
-            pengeluaran: 0,
-            keuntunganBersih: 0,
-        }));
+        const dayCount = Math.ceil((end.getTime() - start.getTime()) / 86400000);
+        const buckets = Array.from({ length: dayCount + 1 }, (_, i) => {
+            const d = new Date(start);
+            d.setDate(start.getDate() + i);
+            return {
+                key: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`,
+                label: formatIdShortDate(d),
+                pemasukan: 0,
+                pengeluaran: 0,
+                keuntunganBersih: 0,
+            };
+        });
+        const bucketByKey = new Map(buckets.map((b) => [b.key, b]));
         for (const t of transactions) {
             const dt = new Date(t.createdAt);
-            const weekIndex = Math.min(3, Math.floor((dt.getDate() - 1) / 7));
-            const b = buckets[weekIndex];
+            const key = `${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`;
+            const b = bucketByKey.get(key);
             if (!b) continue;
             if (isIncome(t)) add(b, 'pemasukan', t.amount);
             if (isExpense(t)) add(b, 'pengeluaran', t.amount);

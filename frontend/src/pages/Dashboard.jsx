@@ -140,8 +140,10 @@ export default function Dashboard() {
     }, [chartData]);
 
     const formatYAxis = (value) => {
-        if (value >= 1000000) return `${(value / 1000000).toLocaleString("id-ID", { maximumFractionDigits: 1 })}jt`;
-        if (value >= 1000) return `${(value / 1000).toLocaleString("id-ID")}rb`;
+        const abs = Math.abs(value);
+        const sign = value < 0 ? '-' : '';
+        if (abs >= 1000000) return `${sign}${(abs / 1000000).toLocaleString("id-ID", { maximumFractionDigits: 1 })}jt`;
+        if (abs >= 1000) return `${sign}${(abs / 1000).toLocaleString("id-ID")}rb`;
         return value;
     };
 
@@ -195,7 +197,7 @@ export default function Dashboard() {
 
             {/* card stats */}
             <div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
                     <div className="p-5 border-2 border-[#E6E8EC] rounded-xl bg-white transition-all">
                         <p className="text-sm font-medium text-[#6B7280]">Total Penjualan</p>
                         <p className="mt-2 text-2xl font-bold text-[#23262F]">Rp {totalOmzet.toLocaleString("id-ID")}</p>
@@ -214,19 +216,18 @@ export default function Dashboard() {
             </div>
 
             {/* linechart & low stock */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 items-stretch">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 items-stretch">
                 
                 {/* linechart card */}
                 <div className="p-5 border-2 border-[#E6E8EC] rounded-xl bg-white md:col-span-2 flex flex-col">
                     <div className="flex items-center justify-between gap-4 mb-4">
                         <div>
                             <p className="text-base font-semibold text-[#23262F]">Tren Pendapatan</p>
-                            <p className="text-xs text-[#6B7280] mt-1">Omzet vs Keuntungan berdasarkan filter</p>
                         </div>
                     </div>
 
-                    <div className="flex-1">
-                        <div className="h-72 w-full">
+                    <div className="flex-1 flex flex-col min-h-0">
+                        <div className="flex-1 min-h-0 w-full">
                             {isFinanceLoading ? (
                                 <div className="h-full w-full flex items-center justify-center text-sm text-[#8B95A7]">Memuat grafik...</div>
                             ) : financeError ? (
@@ -238,7 +239,7 @@ export default function Dashboard() {
                                     <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                                         <CartesianGrid stroke="#EEF0F3" vertical={false} />
                                         <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "#8B95A7", fontSize: 11 }} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: "#8B95A7", fontSize: 11 }} width={45} tickFormatter={formatYAxis} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: "#8B95A7", fontSize: 11 }} width={45} tickFormatter={formatYAxis} domain={[dataMin => Math.min(dataMin, 0), 'auto']} />
                                         <Tooltip
                                             formatter={(value, name) => [`Rp ${Number(value || 0).toLocaleString("id-ID")}`, formatTooltipName(name)]}
                                             labelStyle={{ color: "#23262F", fontWeight: "bold", paddingBottom: "4px" }}

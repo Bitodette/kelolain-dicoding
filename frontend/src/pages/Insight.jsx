@@ -184,7 +184,12 @@ export default function Insight() {
                             <LineChart data={revenueChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                 <CartesianGrid stroke="#EEF0F3" vertical={false} strokeDasharray="3 3" />
                                 <XAxis dataKey="hari" axisLine={false} tickLine={false} tick={{ fill: "#23262F", fontSize: 11 }} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: "#8B95A7", fontSize: 11 }} tickFormatter={(value) => `${(value / 1000).toLocaleString("id-ID")}rb`} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: "#8B95A7", fontSize: 11 }} tickFormatter={(value) => {
+                                    const abs = Math.abs(value);
+                                    const sign = value < 0 ? '-' : '';
+                                    if (abs >= 1000000) return `${sign}${(abs / 1000000).toLocaleString("id-ID", { maximumFractionDigits: 1 })}jt`;
+                                    return `${sign}${(abs / 1000).toLocaleString("id-ID")}rb`;
+                                }} />
                                 <Tooltip
                                     formatter={(value) => [`Rp ${Number(value || 0).toLocaleString("id-ID")}`, "Revenue"]}
                                     contentStyle={{ borderRadius: "12px", border: "1px solid #E6E8EC", boxShadow: "0 10px 24px rgba(15, 23, 42, 0.08)", padding: "12px" }}
