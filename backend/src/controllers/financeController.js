@@ -72,7 +72,7 @@ exports.getFinanceOverview = asyncHandler(async (req, res) => {
 
         if (ty === 'masuk' || ty === 'pemasukan' || ty === 'income') {
             pemasukan += amt;
-            keuntunganBersih += amt;
+            keuntunganBersih += amt - (Number(t.cogs) || 0);
         }
         if (isExpenseCat(t)) {
             pengeluaran += amt;
@@ -136,10 +136,11 @@ exports.getFinanceOverview = asyncHandler(async (req, res) => {
         let prevPemasukan = 0, prevPengeluaran = 0, prevKeuntunganBersih = 0;
         for (const t of prevTx) {
             const amt = Number(t.amount) || 0;
+            const cogs = Number(t.cogs) || 0;
             const ty = String(t.type || '').toLowerCase().trim();
             if (ty === 'masuk' || ty === 'pemasukan' || ty === 'income') {
                 prevPemasukan += amt;
-                prevKeuntunganBersih += amt;
+                prevKeuntunganBersih += amt - cogs;
             }
             if (ty === 'keluar' || ty === 'pengeluaran' || ty === 'expense') {
                 prevPengeluaran += amt;
