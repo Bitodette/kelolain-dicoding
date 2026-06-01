@@ -83,11 +83,11 @@ const steps = [
 ];
 
 const screenshots = [
-  { label: "Dashboard", desc: "Overview bisnis dalam satu layar", type: "desktop" },
-  { label: "Kasir", desc: "Antarmuka POS yang cepat & responsif", type: "mobile" },
-  { label: "Produk", desc: "Manajemen stok dengan OCR scanner", type: "desktop" },
-  { label: "Keuangan", desc: "Laporan keuangan & grafik interaktif", type: "desktop" },
-  { label: "Insight AI", desc: "Prediksi & rekomendasi cerdas", type: "desktop" },
+  { label: "Dashboard", desc: "Overview bisnis dalam satu layar", file: "dashboard-mobile.png" },
+  { label: "Kasir", desc: "Antarmuka POS yang cepat & responsif", file: null },
+  { label: "Produk", desc: "Manajemen stok dengan OCR scanner", file: null },
+  { label: "Keuangan", desc: "Laporan keuangan & grafik interaktif", file: null },
+  { label: "Insight AI", desc: "Prediksi & rekomendasi cerdas", file: null },
 ];
 
 function useOnScreen(threshold = 0.15) {
@@ -113,41 +113,13 @@ function useOnScreen(threshold = 0.15) {
   return [ref, isVisible];
 }
 
-function DesktopFrame({ children }) {
-  return (
-    <div className="bg-white rounded-xl border border-[#E6E8EC] overflow-hidden shadow-sm group-hover:shadow-lg group-hover:-translate-y-1 transition-all duration-300">
-      <div className="bg-[#F8FAFC] px-3 py-2.5 border-b border-[#E6E8EC] flex items-center gap-1.5">
-        <div className="flex gap-1">
-          <div className="w-2 h-2 rounded-full bg-red-400" />
-          <div className="w-2 h-2 rounded-full bg-yellow-400" />
-          <div className="w-2 h-2 rounded-full bg-green-400" />
-        </div>
-        <div className="flex-1 mx-2 h-4 rounded bg-[#E6E8EC]" />
-      </div>
-      <div className="aspect-[16/10] bg-gradient-to-br from-[#EEF2FF] to-white flex flex-col items-center justify-center p-6">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function PhoneFrame({ children }) {
-  return (
-    <div className="mx-auto max-w-[220px] sm:max-w-[240px] bg-[#23262F] rounded-[2rem] p-2 shadow-sm group-hover:shadow-lg group-hover:-translate-y-1 transition-all duration-300">
-      <div className="flex justify-center pt-2 pb-1">
-        <div className="w-16 h-1.5 rounded-full bg-white/20" />
-      </div>
-      <div className="aspect-[9/19] bg-gradient-to-br from-[#EEF2FF] to-white rounded-[1.25rem] flex flex-col items-center justify-center p-5 overflow-hidden">
-        {children}
-      </div>
-      <div className="flex justify-center pb-2 pt-1">
-        <div className="w-24 h-1 rounded-full bg-white/20" />
-      </div>
-    </div>
-  );
-}
-
 export default function Landing() {
+  useEffect(() => {
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    window.scrollTo(0, 0);
+    if (window.location.hash) history.replaceState(null, '', window.location.pathname);
+  }, []);
+
   const [heroRef, heroVisible] = useOnScreen(0.1);
   const [featuresRef, featuresVisible] = useOnScreen(0.1);
   const [screenshotsRef, screenshotsVisible] = useOnScreen(0.1);
@@ -223,45 +195,14 @@ export default function Landing() {
 
             </div>
 
-            {/* Hero Image / Mockup */}
+            {/* Hero Image */}
             <div className={`relative flex items-center justify-center transition-all duration-700 delay-200 ease-out ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
-              <div className="relative w-full max-w-[400px] lg:max-w-none">
-                <div className="aspect-[9/19] bg-gradient-to-br from-[#EEF2FF] to-[#DEE3FF] rounded-[3rem] border-[6px] border-[#23262F] shadow-2xl mx-auto max-w-[280px] sm:max-w-[320px] relative overflow-hidden animate-float">
-                  <div className="absolute top-0 left-0 right-0 h-5 sm:h-6 bg-[#23262F] flex items-center justify-center">
-                    <div className="w-16 sm:w-20 h-1 sm:h-1.5 rounded-full bg-white/20" />
-                  </div>
-                  <div className="absolute inset-0 top-5 sm:top-6 flex flex-col">
-                    <div className="flex items-center gap-1.5 px-4 pt-4 pb-2">
-                      <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-red-400" />
-                      <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-yellow-400" />
-                      <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-green-400" />
-                    </div>
-                    <div className="flex-1 px-4 space-y-2.5">
-                      <div className="h-3 sm:h-3.5 w-3/4 rounded-md bg-[#2936C4]/10" />
-                      <div className="h-3 sm:h-3.5 w-1/2 rounded-md bg-[#2936C4]/10" />
-                      <div className="grid grid-cols-2 gap-2 mt-3">
-                        {[0, 1, 2, 3].map((j) => (
-                          <div key={j} className="h-16 sm:h-20 rounded-xl bg-white shadow-sm border border-[#E6E8EC] p-2 flex flex-col justify-between">
-                            <div className="h-2 w-2/3 rounded bg-[#2936C4]/10" />
-                            <div className="h-4 w-1/2 rounded bg-[#66D3CC]/20" />
-                          </div>
-                        ))}
-                      </div>
-                      <div className="h-16 sm:h-20 rounded-xl bg-white shadow-sm border border-[#E6E8EC] p-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-[#1D7A52]" />
-                          <div className="h-2 w-16 rounded bg-gray-200" />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="h-3 w-12 rounded bg-[#2936C4]/10" />
-                          <div className="h-4 w-10 rounded bg-[#1D7A52]/20" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="hidden lg:block absolute -top-8 -right-8 w-24 h-24 bg-[#66D3CC]/10 rounded-full blur-xl" />
-                <div className="hidden lg:block absolute -bottom-4 -left-8 w-32 h-32 bg-[#2936C4]/10 rounded-full blur-xl" />
+              <div className="relative w-full max-w-[400px] lg:max-w-none flex justify-center">
+                <img
+                  src="/screenshots/dashboard-mobile.png"
+                  alt="Dashboard Mobile"
+                  className="w-full max-w-[280px] sm:max-w-[320px] h-auto animate-float"
+                />
               </div>
             </div>
           </div>
@@ -319,22 +260,20 @@ export default function Landing() {
                 className={`group transition-all duration-500 ease-out ${screenshotsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
                 style={{ transitionDelay: `${i * 120}ms` }}
               >
-                {s.type === "mobile" ? (
-                  <PhoneFrame>
-                    <svg className="w-8 h-8 text-[#2936C4]/30 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
-                    </svg>
-                    <span className="text-xs font-bold text-[#23262F] text-center">{s.label}</span>
-                    <span className="text-[10px] text-[#8B95A7] mt-1 text-center">{s.desc}</span>
-                  </PhoneFrame>
+                {s.file ? (
+                  <img
+                    src={`/screenshots/${s.file}`}
+                    alt={s.label}
+                    className="w-full h-auto rounded-xl shadow-sm group-hover:shadow-lg group-hover:-translate-y-1 transition-all duration-300"
+                  />
                 ) : (
-                  <DesktopFrame>
-                    <svg className="w-8 h-8 text-[#2936C4]/30 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75 5.159 5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.41a2.25 2.25 0 0 1 3.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                  <div className="aspect-[4/3] rounded-xl bg-gradient-to-br from-[#EEF2FF] to-white border border-[#E6E8EC] flex flex-col items-center justify-center p-6 group-hover:shadow-lg group-hover:-translate-y-1 transition-all duration-300">
+                    <svg className="w-10 h-10 text-[#2936C4]/30 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.41a2.25 2.25 0 0 1 3.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
                     </svg>
-                    <span className="text-xs font-bold text-[#23262F] text-center">{s.label}</span>
-                    <span className="text-[10px] text-[#8B95A7] mt-1 text-center">{s.desc}</span>
-                  </DesktopFrame>
+                    <span className="text-xs sm:text-sm text-center font-semibold text-[#8B95A7] group-hover:text-[#23262F] transition-colors">{s.label}</span>
+                    <span className="text-[10px] sm:text-xs text-center text-[#8B95A7] mt-1">{s.desc}</span>
+                  </div>
                 )}
               </div>
             ))}

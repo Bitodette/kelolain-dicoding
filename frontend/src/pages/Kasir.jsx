@@ -199,14 +199,14 @@ export default function Kasir() {
                 {/* list produk */}
                 <div className="bg-white border border-[#E6E8EC] rounded-xl flex-1 flex flex-col shadow-sm overflow-hidden min-w-0 w-full">
 
-                    <div className="hidden sm:grid sm:grid-cols-[1fr_80px_120px_48px] items-center bg-[#F8FAFC] border-b border-[#E6E8EC] text-xs font-bold text-[#6B7280] uppercase px-4 py-3 gap-2 w-full">
-                        <div>Nama Produk</div>
-                        <div className="text-center">Stok</div>
-                        <div className="text-right">Harga</div>
-                        <div></div>
-                    </div>
-                    
                     <div className="overflow-y-auto max-h-[calc(100vh-22rem)] w-full">
+                        <div className="sticky top-0 z-10 hidden sm:grid sm:grid-cols-[1fr_80px_120px_48px] items-center bg-[#F8FAFC] border-b border-[#E6E8EC] text-xs font-bold text-[#6B7280] uppercase px-4 py-3 gap-2 w-full">
+                            <div>Nama Produk</div>
+                            <div className="text-center">Stok</div>
+                            <div className="text-right">Harga</div>
+                            <div></div>
+                        </div>
+                        
                         <div className="flex flex-col w-full min-w-0">
                             {loading ? (
                                 <div className="py-12 text-center text-[#8B95A7] text-sm font-medium">Memuat data produk...</div>
@@ -222,7 +222,7 @@ export default function Kasir() {
                                     <div 
                                         key={product.id}
                                         onClick={() => addToCart(product)}
-                                        className="grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_80px_120px_48px] items-center gap-3 px-3 sm:px-4 py-3 hover:bg-indigo-50 cursor-pointer transition-colors group border-b border-[#E6E8EC] last:border-0 w-full min-w-0"
+                                        className="grid grid-cols-[1fr_auto] sm:grid-cols-[1fr_80px_120px_48px] items-center gap-2 px-3 sm:px-4 py-3 hover:bg-indigo-50 cursor-pointer transition-colors group border-b border-[#E6E8EC] last:border-0 w-full min-w-0"
                                     >
                                         {/* nama produk */}
                                         <div className="min-w-0 pr-2 flex flex-col justify-center">

@@ -17,8 +17,7 @@ function buildTrend({ period, start, end, transactions }) {
 
     const getProfitDelta = (t) => {
         const amt = Number(t?.amount) || 0;
-        const cogs = Number(t?.cogs) || 0;
-        if (isIncome(t)) return amt - cogs;
+        if (isIncome(t)) return amt;
         if (isExpense(t)) return -amt;
         return 0;
     };

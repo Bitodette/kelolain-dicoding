@@ -72,33 +72,99 @@ const monthConfig = [
   { year: 2026, month: 5, dailyAvg: 490000, growth: 1.55 },
 ];
 
-const expenseSchedule = [
-  { year: 2025, month: 11, label: 'Sewa tempat Desember', amount: 700000, category: 'Operasional' },
-  { year: 2025, month: 11, label: 'Restock stok awal', amount: 1000000, category: 'Restock Barang' },
-  { year: 2026, month: 0, label: 'Sewa tempat Januari', amount: 700000, category: 'Operasional' },
-  { year: 2026, month: 0, label: 'Tagihan listrik Januari', amount: 350000, category: 'Operasional' },
-  { year: 2026, month: 0, label: 'Restock stok Januari', amount: 800000, category: 'Restock Barang' },
-  { year: 2026, month: 1, label: 'Sewa tempat Februari', amount: 700000, category: 'Operasional' },
-  { year: 2026, month: 1, label: 'Gaji karyawan', amount: 1200000, category: 'Operasional' },
-  { year: 2026, month: 1, label: 'Restock stok Februari', amount: 900000, category: 'Restock Barang' },
-  { year: 2026, month: 2, label: 'Sewa tempat Maret', amount: 700000, category: 'Operasional' },
-  { year: 2026, month: 2, label: 'Tagihan listrik Maret', amount: 400000, category: 'Operasional' },
-  { year: 2026, month: 2, label: 'Restock stok Maret', amount: 1000000, category: 'Restock Barang' },
-  { year: 2026, month: 3, label: 'Sewa tempat April', amount: 700000, category: 'Operasional' },
-  { year: 2026, month: 3, label: 'Gaji karyawan April', amount: 1200000, category: 'Operasional' },
-  { year: 2026, month: 3, label: 'Restock stok April', amount: 1100000, category: 'Restock Barang' },
-  { year: 2026, month: 4, label: 'Sewa tempat Mei', amount: 700000, category: 'Operasional' },
-  { year: 2026, month: 4, label: 'Tagihan listrik Mei', amount: 450000, category: 'Operasional' },
-  { year: 2026, month: 4, label: 'Restock stok Mei', amount: 1200000, category: 'Restock Barang' },
-  { year: 2026, month: 5, label: 'Sewa tempat Juni', amount: 700000, category: 'Operasional' },
-  { year: 2026, month: 5, label: 'Gaji karyawan Juni', amount: 1200000, category: 'Operasional' },
-  { year: 2026, month: 5, label: 'Restock stok Juni', amount: 1300000, category: 'Restock Barang' },
-  { year: 2026, month: 5, label: 'Tagihan listrik Juni', amount: 500000, category: 'Operasional' },
-];
+const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
 const times = ['Pagi', 'Siang', 'Sore', 'Malam'];
-const txHour = [8, 12, 16, 19];
-const txWeight = [0.25, 0.3, 0.2, 0.25];
+
+const roundK = v => Math.round(v / 1000) * 1000;
+
+function mkExpense(label, category, amount, year, month, day, hour, minute = 0) {
+  return {
+    label, type: 'Keluar', category, cogs: 0,
+    amount: roundK(amount),
+    createdAt: new Date(year, month, day, hour, minute, 0, 0),
+    items: null,
+  };
+}
+
+function generateExpenses() {
+  const list = [];
+  const months = [
+    { year: 2025, month: 11 }, { year: 2026, month: 0 },
+    { year: 2026, month: 1 }, { year: 2026, month: 2 },
+    { year: 2026, month: 3 }, { year: 2026, month: 4 },
+    { year: 2026, month: 5 },
+  ];
+
+  for (const { year, month } of months) {
+    const b = year * 100 + month;
+    const mName = monthNames[month];
+
+    // Sewa tempat — 1st–3rd
+    list.push(mkExpense('Sewa tempat ' + mName, 'Sewa Tempat', 700000, year, month, 1 + Math.floor(rng(b * 3 + 1) * 3), 9));
+    // Gaji karyawan — 25th–27th
+    list.push(mkExpense('Gaji karyawan ' + mName, 'Gaji Karyawan', 1500000, year, month, 25 + Math.floor(rng(b * 7 + 3) * 3), 16));
+    // Bayar listrik — mid-month, varies
+    list.push(mkExpense('Tagihan listrik ' + mName, 'Operasional', 250000 + rng(b * 11 + 5) * 250000, year, month, 12 + Math.floor(rng(b * 13 + 7) * 7), 10));
+    // Bayar PDAM — 8th–12th
+    list.push(mkExpense('Bayar PDAM ' + mName, 'Operasional', 75000 + rng(b * 17 + 11) * 50000, year, month, 8 + Math.floor(rng(b * 19 + 13) * 5), 10));
+    // WiFi & Internet — 5th–7th
+    list.push(mkExpense('Bayar WiFi & Internet', 'Operasional', 200000, year, month, 5 + Math.floor(rng(b * 23 + 17) * 3), 9));
+
+    // Restock barang — twice a month
+    for (const half of [0, 1]) {
+      const rDay = half === 0
+        ? 3 + Math.floor(rng(b * 29 + 19 + half * 31) * 5)
+        : 18 + Math.floor(rng(b * 31 + 23 + half * 37) * 5);
+      list.push(mkExpense(
+        half === 0 ? 'Restock stok ' + mName : 'Restock stok tambahan ' + mName,
+        'Restock Barang', 600000 + rng(b * 37 + 29 + half * 43) * 900000, year, month, rDay, 8,
+      ));
+    }
+
+    // Promosi & iklan — once a month
+    const promoLabels = ['Promosi media sosial', 'Cetak spanduk & brosur', 'Biaya iklan online', 'Biaya endorse'];
+    list.push(mkExpense(
+      promoLabels[Math.floor(rng(b * 41 + 31) * promoLabels.length)],
+      'Promosi & Iklan', 150000 + rng(b * 43 + 37) * 350000, year, month, 5 + Math.floor(rng(b * 47 + 41) * 15), 10,
+    ));
+
+    // Transportasi — 3–4× per month
+    for (let w = 0; w < 3 + Math.floor(rng(b * 53 + 43) * 2); w++) {
+      const tDay = 2 + w * 7 + Math.floor(rng(b * 59 + 47 + w * 61) * 4);
+      if (tDay > 28) continue;
+      list.push(mkExpense('Transportasi & bensin', 'Transportasi', 100000 + rng(b * 61 + 53 + w * 71) * 100000, year, month, tDay, 11));
+    }
+
+    // Operasional (ATK, kebersihan, dll) — twice a month
+    const oLabels = ['Beli ATK & alat tulis', 'Keperluan kebersihan toko', 'Beli kantong plastik', 'Isi ulang galon', 'Beli bubble wrap & lakban'];
+    for (let o = 0; o < 2; o++) {
+      const oDay = o === 0
+        ? 5 + Math.floor(rng(b * 67 + 59 + o * 73) * 5)
+        : 18 + Math.floor(rng(b * 71 + 61 + o * 79) * 5);
+      list.push(mkExpense(
+        oLabels[Math.floor(rng(b * 73 + 67 + o * 83) * oLabels.length)],
+        'Operasional', 50000 + rng(b * 79 + 71 + o * 89) * 100000, year, month, oDay, 9,
+      ));
+    }
+  }
+
+  // One-time irregular expenses
+  const oneTime = [
+    ['Beli etalase kaca baru', 'Operasional', 850000, 2026, 0, 15, 10],
+    ['Perbaikan atap bocor', 'Operasional', 350000, 2026, 2, 8, 9],
+    ['Sumbangan sosial warga', 'Pengeluaran Lainnya', 200000, 2026, 3, 17, 10],
+    ['Beli timbangan digital', 'Operasional', 280000, 2026, 1, 10, 9],
+    ['Servis AC toko', 'Operasional', 400000, 2026, 4, 22, 10],
+    ['Perpanjangan NIB & legalitas', 'Pengeluaran Lainnya', 350000, 2026, 2, 20, 9],
+    ['Beli rak display tambahan', 'Operasional', 550000, 2026, 3, 5, 10],
+  ];
+  for (const [label, cat, amount, y, m, d, h] of oneTime) {
+    list.push(mkExpense(label, cat, amount, y, m, d, h));
+  }
+
+  return list;
+}
 
 function generateAll() {
   const list = [];
@@ -123,7 +189,6 @@ function generateAll() {
     const dailyTarget = Math.round(cfg.dailyAvg * cfg.growth * dowFactor * domFactor);
     if (dailyTarget < 50000) continue;
 
-    // weigh by txWeight to split daily into transactions
     const numTx = 3 + Math.floor(rng(daySeed + 17) * 1.5);
     const baseSplit = dailyTarget / numTx;
 
@@ -144,7 +209,7 @@ function generateAll() {
       list.push({
         label: `Penjualan ${d.getDate()}/${d.getMonth() + 1} ${times[t] || 'Ekstra'}`,
         type: 'Masuk',
-        category: 'Penjualan',
+        category: 'Pendapatan Jualan',
         amount,
         cogs,
         createdAt: txDate,
@@ -153,18 +218,22 @@ function generateAll() {
     }
   }
 
-  // add monthly expenses
-  for (const ex of expenseSchedule) {
-    const exDate = new Date(ex.year, ex.month, 20 + Math.floor(rng(ex.year * 100 + ex.month) * 8));
-    exDate.setHours(9, 0, 0, 0);
+  // add expenses
+  for (const ex of generateExpenses()) {
+    list.push(ex);
+  }
+
+  // add occasional non-sales income (Pendapatan Lainnya)
+  const otherIncome = [
+    ['Cashback supplier', 150000, 2026, 0, 20, 10],
+    ['Penjualan aset bekas', 450000, 2026, 2, 25, 14],
+    ['Pengembalian deposit', 200000, 2026, 4, 12, 10],
+  ];
+  for (const [label, amount, y, m, d, h] of otherIncome) {
+    const dt = new Date(y, m, d, h, 0, 0, 0);
     list.push({
-      label: ex.label,
-      type: 'Keluar',
-      category: ex.category,
-      amount: Math.round(ex.amount / 1000) * 1000,
-      cogs: 0,
-      createdAt: exDate,
-      items: null,
+      label, type: 'Masuk', category: 'Pendapatan Lainnya', cogs: 0,
+      amount, createdAt: dt, items: null,
     });
   }
 
