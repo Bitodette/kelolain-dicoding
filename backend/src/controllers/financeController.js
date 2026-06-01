@@ -103,7 +103,7 @@ exports.getFinanceOverview = asyncHandler(async (req, res) => {
     // --- komparasi periode sebelumnya ---
     const computeChange = (curr, prev) => {
         if (prev === 0) return curr > 0 ? { change: 100, previous: 0 } : { change: 0, previous: 0 };
-        return { change: Math.round(((curr - prev) / prev) * 1000) / 10, previous };
+        return { change: Math.round(((curr - prev) / prev) * 1000) / 10, previous: prev };
     };
 
     let prevRange = null;
