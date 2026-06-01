@@ -389,15 +389,15 @@ export default function RiwayatTransaksi() {
             {/* Modal Detail (Penjualan Kasir) */}
             {isDetailOpen && detailTx && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col">
-                        <div className="px-5 py-4 border-b border-[#E6E8EC] flex items-center justify-between bg-[#F8FAFC]">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
+                        <div className="px-5 py-4 border-b border-[#E6E8EC] flex items-center justify-between bg-[#F8FAFC] flex-shrink-0">
                             <h3 className="text-lg font-bold text-[#23262F]">Detail Transaksi</h3>
                             <button onClick={() => setIsDetailOpen(false)} className="text-[#8B95A7] hover:text-[#E02D3C] transition-colors">
                                 ✕
                             </button>
                         </div>
 
-                        <div className="p-5 space-y-4">
+                        <div className="p-5 space-y-4 overflow-y-auto">
                             <div>
                                 <p className="text-sm font-bold text-[#23262F]">{detailTx.label}</p>
                                 <p className="text-xs text-[#8B95A7] mt-1">
@@ -470,7 +470,7 @@ export default function RiwayatTransaksi() {
                             )}
                         </div>
 
-                        <div className="p-5 border-t border-[#E6E8EC] flex items-center justify-end bg-gray-50">
+                        <div className="p-5 border-t border-[#E6E8EC] flex items-center justify-end bg-gray-50 flex-shrink-0">
                             <button onClick={() => setIsDetailOpen(false)} className="px-5 py-2.5 text-sm font-bold text-[#6B7280] hover:text-[#23262F] transition-colors">
                                 Tutup
                             </button>
