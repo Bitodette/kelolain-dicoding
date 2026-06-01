@@ -274,7 +274,7 @@ export default function Kasir() {
 
             {/* card kanan (cart) */}
             <div className={`
-                fixed bottom-0 left-0 right-0 bg-white border-t sm:border border-[#E6E8EC] rounded-t-xl lg:rounded-xl flex flex-col shadow-[0_-15px_40px_rgba(0,0,0,0.1)] lg:shadow-sm transition-transform duration-300 ease-in-out w-full max-w-full
+                fixed bottom-0 left-0 right-0 bg-white border-t sm:border border-[#E6E8EC] rounded-t-xl lg:rounded-xl flex flex-col shadow-[0_-15px_40px_rgba(0,0,0,0.1)] lg:shadow-sm transition-transform duration-300 ease-in-out w-full lg:max-w-[380px] xl:max-w-[420px]
                 ${isCartOpenMobile ? "translate-y-0" : "translate-y-[calc(100%-72px)] lg:translate-y-0"}
                 lg:static lg:h-[calc(100vh-8rem)] lg:flex
             `}>
