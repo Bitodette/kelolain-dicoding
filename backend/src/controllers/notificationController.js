@@ -18,8 +18,8 @@ async function syncLowStockNotifications(orgId) {
         const text = `Stok "${p.name}" tersisa ${p.stock} pcs`;
         const notif = existingMap.get(p.id);
         if (notif) {
-            if (notif.text !== text || notif.read !== false) {
-                await prisma.notification.update({ where: { id: notif.id }, data: { text, read: false } });
+            if (notif.text !== text) {
+                await prisma.notification.update({ where: { id: notif.id }, data: { text } });
             }
         } else {
             await prisma.notification.create({

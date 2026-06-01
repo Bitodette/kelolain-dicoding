@@ -74,7 +74,7 @@ router.post('/ai/ocr/scan', authenticate, upload.single('receipt'), aiController
 
 // ROUTES NOTIFIKASI
 router.get('/notifications', authenticate, notificationController.getNotifications);
-router.patch('/notifications/:id/read', authenticate, notificationController.markRead);
 router.patch('/notifications/read-all', authenticate, notificationController.markAllRead);
+router.patch('/notifications/:id/read', authenticate, notificationController.markRead);
 
 module.exports = router;
