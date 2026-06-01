@@ -83,11 +83,11 @@ const steps = [
 ];
 
 const screenshots = [
-  { label: "Dashboard", desc: "Overview bisnis dalam satu layar" },
-  { label: "Kasir", desc: "Antarmuka POS yang cepat & responsif" },
-  { label: "Produk", desc: "Manajemen stok dengan OCR scanner" },
-  { label: "Keuangan", desc: "Laporan keuangan & grafik interaktif" },
-  { label: "Insight AI", desc: "Prediksi & rekomendasi cerdas" },
+  { label: "Dashboard", desc: "Overview bisnis dalam satu layar", type: "desktop" },
+  { label: "Kasir", desc: "Antarmuka POS yang cepat & responsif", type: "mobile" },
+  { label: "Produk", desc: "Manajemen stok dengan OCR scanner", type: "desktop" },
+  { label: "Keuangan", desc: "Laporan keuangan & grafik interaktif", type: "desktop" },
+  { label: "Insight AI", desc: "Prediksi & rekomendasi cerdas", type: "desktop" },
 ];
 
 function useOnScreen(threshold = 0.15) {
@@ -113,28 +113,38 @@ function useOnScreen(threshold = 0.15) {
   return [ref, isVisible];
 }
 
-function AnimatedCounter({ target, suffix = "" }) {
-  const [count, setCount] = useState(0);
-  const [ref, isVisible] = useOnScreen(0.5);
+function DesktopFrame({ children }) {
+  return (
+    <div className="bg-white rounded-xl border border-[#E6E8EC] overflow-hidden shadow-sm group-hover:shadow-lg group-hover:-translate-y-1 transition-all duration-300">
+      <div className="bg-[#F8FAFC] px-3 py-2.5 border-b border-[#E6E8EC] flex items-center gap-1.5">
+        <div className="flex gap-1">
+          <div className="w-2 h-2 rounded-full bg-red-400" />
+          <div className="w-2 h-2 rounded-full bg-yellow-400" />
+          <div className="w-2 h-2 rounded-full bg-green-400" />
+        </div>
+        <div className="flex-1 mx-2 h-4 rounded bg-[#E6E8EC]" />
+      </div>
+      <div className="aspect-[16/10] bg-gradient-to-br from-[#EEF2FF] to-white flex flex-col items-center justify-center p-6">
+        {children}
+      </div>
+    </div>
+  );
+}
 
-  useEffect(() => {
-    if (!isVisible) return;
-    let start = 0;
-    const duration = 1200;
-    const step = Math.ceil(target / (duration / 16));
-    const timer = setInterval(() => {
-      start += step;
-      if (start >= target) {
-        setCount(target);
-        clearInterval(timer);
-      } else {
-        setCount(start);
-      }
-    }, 16);
-    return () => clearInterval(timer);
-  }, [isVisible, target]);
-
-  return <span ref={ref}>{count}{suffix}</span>;
+function PhoneFrame({ children }) {
+  return (
+    <div className="mx-auto max-w-[220px] sm:max-w-[240px] bg-[#23262F] rounded-[2rem] p-2 shadow-sm group-hover:shadow-lg group-hover:-translate-y-1 transition-all duration-300">
+      <div className="flex justify-center pt-2 pb-1">
+        <div className="w-16 h-1.5 rounded-full bg-white/20" />
+      </div>
+      <div className="aspect-[9/19] bg-gradient-to-br from-[#EEF2FF] to-white rounded-[1.25rem] flex flex-col items-center justify-center p-5 overflow-hidden">
+        {children}
+      </div>
+      <div className="flex justify-center pb-2 pt-1">
+        <div className="w-24 h-1 rounded-full bg-white/20" />
+      </div>
+    </div>
+  );
 }
 
 export default function Landing() {
@@ -151,10 +161,10 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
             <Link to="/" className="flex items-center gap-2.5">
-              <Logo className="w-8 h-8 sm:w-9 sm:h-9" />
-              <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#23262F]">
-                Kelola<span className="text-[#2936C4]">in</span>
-              </span>
+              <Logo className="flex-shrink-0 w-6 h-6" />
+              <h1 className="text-xl font-bold text-[#5B567A]">
+                Kelola<span className="text-[#2936C4]">.in</span>
+              </h1>
             </Link>
 
             <nav className="hidden md:flex items-center gap-8">
@@ -178,26 +188,26 @@ export default function Landing() {
       {/* Hero */}
       <section
         ref={heroRef}
-        className="relative pt-12 sm:pt-20 pb-20 sm:pb-32 px-4"
+        className="relative pt-10 sm:pt-14 lg:pt-20 pb-16 sm:pb-24 lg:pb-32 px-4"
       >
         <div className="absolute inset-0 bg-gradient-to-b from-[#EEF2FF] via-white to-white pointer-events-none" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[#2936C4]/[0.03] rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             <div className={`text-center lg:text-left transition-all duration-700 ease-out ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EEF2FF] text-[#2936C4] text-xs sm:text-sm font-semibold mb-6">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EEF2FF] text-[#2936C4] text-xs sm:text-sm font-semibold mb-4 lg:mb-6">
                 <span className="w-2 h-2 rounded-full bg-[#2936C4] animate-pulse" />
                 All-in-One Business Management
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] mb-6">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] mb-4 lg:mb-6">
                 Kelola Bisnismu
                 <br />
                 <span className="text-[#2936C4]">Lebih Cerdas</span>
               </h1>
 
-              <p className="text-base sm:text-lg text-[#6B7280] max-w-lg mx-auto lg:mx-0 mb-8 leading-relaxed">
+              <p className="text-sm sm:text-base lg:text-lg text-[#6B7280] max-w-lg mx-auto lg:mx-0 mb-6 lg:mb-8 leading-relaxed">
                 Platform manajemen bisnis all-in-one: kasir, stok, keuangan, dan insight AI.
                 Dirancang khusus untuk UMKM dan bisnis ritel Indonesia.
               </p>
@@ -211,25 +221,6 @@ export default function Landing() {
                 </a>
               </div>
 
-              <div className="flex items-center gap-6 mt-8 justify-center lg:justify-start">
-                <div className="flex -space-x-2">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div
-                      key={i}
-                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#2936C4] to-[#66D3CC] flex items-center justify-center text-white text-xs sm:text-sm font-bold border-2 border-white transition-all duration-500 ease-out ${heroVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}
-                      style={{ transitionDelay: `${300 + i * 100}ms` }}
-                    >
-                      {String.fromCharCode(64 + i)}
-                    </div>
-                  ))}
-                </div>
-                <div className={`text-left transition-all duration-700 delay-500 ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-                  <div className="text-sm sm:text-base font-extrabold text-[#23262F]">
-                    <AnimatedCounter target={500} />+
-                  </div>
-                  <div className="text-xs sm:text-sm text-[#8B95A7]">bisnis sudah bergabung</div>
-                </div>
-              </div>
             </div>
 
             {/* Hero Image / Mockup */}
@@ -278,14 +269,14 @@ export default function Landing() {
       </section>
 
       {/* Features */}
-      <section id="fitur" ref={featuresRef} className="py-16 sm:py-24 px-4">
+      <section id="fitur" ref={featuresRef} className="py-12 sm:py-16 lg:py-24 px-4">
         <div className="max-w-7xl mx-auto">
           <div className={`text-center mb-12 sm:mb-16 transition-all duration-700 ease-out ${featuresVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <span className="text-xs sm:text-sm font-bold uppercase tracking-widest text-[#2936C4]">Fitur</span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mt-3 mb-4">
+            <h2 className="text-2xl sm:text-3xl lg:text-5xl font-extrabold mt-3 mb-4">
               Semua yang Anda Butuhkan
             </h2>
-            <p className="text-[#6B7280] max-w-2xl mx-auto text-base sm:text-lg">
+            <p className="text-[#6B7280] max-w-2xl mx-auto text-sm sm:text-base lg:text-lg">
               Dari kasir hingga insight AI, semua fitur dirancang untuk membantu bisnis Anda berkembang.
             </p>
           </div>
@@ -309,32 +300,42 @@ export default function Landing() {
       </section>
 
       {/* Screenshots Preview */}
-      <section id="screenshot" ref={screenshotsRef} className="py-16 sm:py-24 px-4 bg-[#F8FAFC]">
+      <section id="screenshot" ref={screenshotsRef} className="py-12 sm:py-16 lg:py-24 px-4 bg-[#F8FAFC]">
         <div className="max-w-7xl mx-auto">
           <div className={`text-center mb-12 sm:mb-16 transition-all duration-700 ease-out ${screenshotsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <span className="text-xs sm:text-sm font-bold uppercase tracking-widest text-[#2936C4]">Preview</span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mt-3 mb-4">
+            <h2 className="text-2xl sm:text-3xl lg:text-5xl font-extrabold mt-3 mb-4">
               Lihat Tampilan Aplikasi
             </h2>
-            <p className="text-[#6B7280] max-w-2xl mx-auto text-base sm:text-lg">
+            <p className="text-[#6B7280] max-w-2xl mx-auto text-sm sm:text-base lg:text-lg">
               Antarmuka yang bersih, modern, dan mudah digunakan di berbagai perangkat.
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6 sm:gap-8 items-start">
             {screenshots.map((s, i) => (
               <div
                 key={i}
-                className={`group cursor-pointer transition-all duration-500 ease-out ${screenshotsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+                className={`group transition-all duration-500 ease-out ${screenshotsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
                 style={{ transitionDelay: `${i * 120}ms` }}
               >
-                <div className="aspect-[9/16] rounded-2xl bg-gradient-to-br from-[#EEF2FF] to-white border border-[#E6E8EC] flex flex-col items-center justify-center p-6 group-hover:shadow-lg group-hover:-translate-y-1 transition-all duration-300">
-                  <svg className="w-10 h-10 text-[#2936C4]/30 mb-3 group-hover:scale-110 group-hover:text-[#2936C4]/50 transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.41a2.25 2.25 0 0 1 3.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-                  </svg>
-                  <span className="text-xs sm:text-sm text-center font-semibold text-[#8B95A7] group-hover:text-[#23262F] transition-colors">{s.label}</span>
-                  <span className="text-[10px] sm:text-xs text-center text-[#8B95A7] mt-1">{s.desc}</span>
-                </div>
+                {s.type === "mobile" ? (
+                  <PhoneFrame>
+                    <svg className="w-8 h-8 text-[#2936C4]/30 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                    </svg>
+                    <span className="text-xs font-bold text-[#23262F] text-center">{s.label}</span>
+                    <span className="text-[10px] text-[#8B95A7] mt-1 text-center">{s.desc}</span>
+                  </PhoneFrame>
+                ) : (
+                  <DesktopFrame>
+                    <svg className="w-8 h-8 text-[#2936C4]/30 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75 5.159 5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.41a2.25 2.25 0 0 1 3.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                    </svg>
+                    <span className="text-xs font-bold text-[#23262F] text-center">{s.label}</span>
+                    <span className="text-[10px] text-[#8B95A7] mt-1 text-center">{s.desc}</span>
+                  </DesktopFrame>
+                )}
               </div>
             ))}
           </div>
@@ -348,14 +349,14 @@ export default function Landing() {
       </section>
 
       {/* How It Works */}
-      <section id="cara-kerja" ref={stepsRef} className="py-16 sm:py-24 px-4">
+      <section id="cara-kerja" ref={stepsRef} className="py-12 sm:py-16 lg:py-24 px-4">
         <div className="max-w-4xl mx-auto">
           <div className={`text-center mb-12 sm:mb-16 transition-all duration-700 ease-out ${stepsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <span className="text-xs sm:text-sm font-bold uppercase tracking-widest text-[#2936C4]">Cara Kerja</span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mt-3 mb-4">
+            <h2 className="text-2xl sm:text-3xl lg:text-5xl font-extrabold mt-3 mb-4">
               Mulai dalam 4 Langkah
             </h2>
-            <p className="text-[#6B7280] max-w-2xl mx-auto text-base sm:text-lg">
+            <p className="text-[#6B7280] max-w-2xl mx-auto text-sm sm:text-base lg:text-lg">
               Tidak perlu ribet. Dalam hitungan menit, bisnis Anda sudah siap dikelola dengan Kelola-in.
             </p>
           </div>
@@ -388,16 +389,16 @@ export default function Landing() {
       </section>
 
       {/* CTA */}
-      <section ref={ctaRef} className="py-16 sm:py-24 px-4">
+      <section ref={ctaRef} className="py-12 sm:py-16 lg:py-24 px-4">
         <div className={`max-w-4xl mx-auto text-center bg-gradient-to-br from-[#2936C4] to-[#1a1f7a] rounded-3xl p-8 sm:p-16 relative overflow-hidden transition-all duration-700 ease-out ${ctaVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#66D3CC]/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl" />
 
           <div className="relative">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-4">
+            <h2 className="text-2xl sm:text-3xl lg:text-5xl font-extrabold text-white mb-4">
               Siap Mengelola Bisnis Lebih Baik?
             </h2>
-            <p className="text-[#C7D2FE] text-base sm:text-lg max-w-xl mx-auto mb-8">
+            <p className="text-[#C7D2FE] text-sm sm:text-base lg:text-lg max-w-xl mx-auto mb-8">
               Bergabung dengan 500+ bisnis lainnya. Gratis, tanpa ribet, tanpa kartu kredit.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -420,10 +421,10 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <Link to="/" className="flex items-center gap-2.5">
-              <Logo className="w-7 h-7" />
-              <span className="text-lg font-extrabold tracking-tight">
-                Kelola<span className="text-[#2936C4]">in</span>
-              </span>
+              <Logo className="flex-shrink-0 w-6 h-6" />
+              <h1 className="text-lg font-bold text-[#5B567A]">
+                Kelola<span className="text-[#2936C4]">.in</span>
+              </h1>
             </Link>
             <nav className="flex items-center gap-6 text-sm text-[#6B7280]">
               <a href="#fitur" className="hover:text-[#23262F] transition-colors">Fitur</a>
@@ -432,7 +433,7 @@ export default function Landing() {
             </nav>
           </div>
           <div className="mt-6 text-center text-xs sm:text-sm text-[#8B95A7]">
-            &copy; {new Date().getFullYear()} Kelola-in. All rights reserved.
+            &copy; {new Date().getFullYear()} Kelola.in. All rights reserved.
           </div>
         </div>
       </footer>

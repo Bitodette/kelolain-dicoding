@@ -84,7 +84,7 @@ export default function Sidebar({ activeTab, mobileOpen, setMobileOpen, allowedP
           <h1
             className={`text-xl font-bold text-[#5B567A] overflow-hidden transition-all duration-300 ${logoTextClass}`}
           >
-            Kelola.in
+            Kelola<span className="text-[#2936C4]">.in</span>
           </h1>
         </div>
       
