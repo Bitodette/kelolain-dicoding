@@ -231,7 +231,7 @@ export default function Kasir() {
                                             </p>
                                             <div className="flex items-center gap-2 mt-0.5 min-w-0">
                                                 <p className="text-[10px] text-[#8B95A7] font-medium truncate shrink-0">{product.category}</p>
-                                                <span className={`sm:hidden text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${product.stock <= 10 ? 'bg-red-50 text-[#E02D3C]' : 'bg-gray-100 text-[#6B7280]'}`}>
+                                                <span className={`sm:hidden text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${product.stock <= 5 ? 'bg-red-50 text-[#E02D3C]' : 'bg-gray-100 text-[#6B7280]'}`}>
                                                     Stok {product.stock}
                                                 </span>
                                             </div>
@@ -239,7 +239,7 @@ export default function Kasir() {
                                         
                                         {/* stok */}
                                         <div className="hidden sm:block text-center shrink-0">
-                                            <span className={`text-xs font-bold px-2 py-1 rounded ${product.stock <= 10 ? 'bg-red-50 text-[#E02D3C]' : 'bg-gray-100 text-[#6B7280]'}`}>
+                                            <span className={`text-xs font-bold px-2 py-1 rounded ${product.stock <= 5 ? 'bg-red-50 text-[#E02D3C]' : 'bg-gray-100 text-[#6B7280]'}`}>
                                                 {product.stock}
                                             </span>
                                         </div>
