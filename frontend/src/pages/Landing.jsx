@@ -1,6 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Logo from "../components/Logo";
+
+gsap.registerPlugin(ScrollTrigger);
 
 const features = [
   {
@@ -82,49 +86,158 @@ const steps = [
   },
 ];
 
-const screenshots = [
-  { label: "Dashboard", desc: "Overview bisnis dalam satu layar", file: "dashboard-mobile.png" },
-  { label: "Kasir", desc: "Antarmuka POS yang cepat & responsif", file: null },
-  { label: "Produk", desc: "Manajemen stok dengan OCR scanner", file: null },
-  { label: "Keuangan", desc: "Laporan keuangan & grafik interaktif", file: null },
-  { label: "Insight AI", desc: "Prediksi & rekomendasi cerdas", file: null },
-];
+function LaptopMockup({ src, alt }) {
+  return (
+    <div className="relative mx-auto w-full max-w-3xl">
+      <div className="relative bg-[#1a1d23] rounded-t-xl rounded-b-sm p-2 pb-3 shadow-[0_20px_80px_-12px_rgba(0,0,0,0.35)]">
+        <div className="flex items-center gap-1.5 px-2 pb-2.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+        </div>
+        <div className="relative overflow-hidden rounded-lg bg-white">
+          <img src={src} alt={alt} className="w-full h-auto" />
+        </div>
+      </div>
+      {/* Stand */}
+      <div className="mx-auto w-[18%] h-2 bg-[#2c2f36] rounded-b-lg shadow-md" />
+      <div className="mx-auto w-[30%] h-1 bg-[#3a3e47] rounded-b-sm opacity-50" />
+    </div>
+  );
+}
 
-function useOnScreen(threshold = 0.15) {
-  const ref = useRef(null);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.unobserve(el);
-        }
-      },
-      { threshold }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [threshold]);
-
-  return [ref, isVisible];
+function PhoneMockup({ src, alt }) {
+  return (
+    <div className="relative mx-auto w-fit">
+      <img src={src} alt={alt} className="w-full max-w-[280px] sm:max-w-[320px] h-auto" />
+    </div>
+  );
 }
 
 export default function Landing() {
+  const heroRef = useRef(null);
+  const featuresRef = useRef(null);
+  const screenshotRef = useRef(null);
+  const stepsRef = useRef(null);
+  const ctaRef = useRef(null);
+
   useEffect(() => {
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     window.scrollTo(0, 0);
     if (window.location.hash) history.replaceState(null, '', window.location.pathname);
   }, []);
 
-  const [heroRef, heroVisible] = useOnScreen(0.1);
-  const [featuresRef, featuresVisible] = useOnScreen(0.1);
-  const [screenshotsRef, screenshotsVisible] = useOnScreen(0.1);
-  const [stepsRef, stepsVisible] = useOnScreen(0.1);
-  const [ctaRef, ctaVisible] = useOnScreen(0.1);
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      /* ── Hero entrance ── */
+      const hero = heroRef.current;
+      const heroTl = gsap.timeline();
+      heroTl
+        .fromTo(
+          hero.querySelectorAll("[data-anim='hero-badge'], [data-anim='hero-heading'], [data-anim='hero-sub'], [data-anim='hero-btns']"),
+          { y: 30, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.6, ease: "power3.out", stagger: 0.12 }
+        )
+        .fromTo(
+          hero.querySelector("[data-anim='hero-phone']"),
+          { y: 60, opacity: 0, scale: 0.9, rotateY: 8 },
+          { y: 0, opacity: 1, scale: 1, rotateY: 0, duration: 0.8, ease: "power4.out" },
+          "-=0.3"
+        );
+
+      gsap.to(hero.querySelectorAll("[data-anim='float-particle']"), {
+        y: -25,
+        duration: 2.5 + Math.random() * 1.5,
+        ease: "sine.inOut",
+        yoyo: true,
+        repeat: -1,
+      });
+
+      /* ── Features ── */
+      ScrollTrigger.create({
+        trigger: featuresRef.current,
+        start: "top 70%",
+        onEnter: () => {
+          gsap.fromTo(
+            featuresRef.current.querySelector("[data-anim='section-header']"),
+            { y: 40, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }
+          );
+          gsap.fromTo(
+            featuresRef.current.querySelectorAll("[data-anim='feature-card']"),
+            { y: 50, opacity: 0 },
+            {
+              y: 0, opacity: 1, duration: 0.5, ease: "power3.out",
+              stagger: 0.06,
+            }
+          );
+        },
+        once: true,
+      });
+
+      /* ── Screenshot ── */
+      ScrollTrigger.create({
+        trigger: screenshotRef.current,
+        start: "top 75%",
+        onEnter: () => {
+          gsap.fromTo(
+            screenshotRef.current.querySelector("[data-anim='section-header']"),
+            { y: 40, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }
+          );
+          gsap.fromTo(
+            screenshotRef.current.querySelector("[data-anim='screenshot-laptop']"),
+            { y: 60, opacity: 0, scale: 0.92 },
+            { y: 0, opacity: 1, scale: 1, duration: 0.8, ease: "power4.out" }
+          );
+          gsap.fromTo(
+            screenshotRef.current.querySelector("[data-anim='screenshot-cta']"),
+            { y: 30, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.5, ease: "power3.out", delay: 0.3 }
+          );
+        },
+        once: true,
+      });
+
+      /* ── Steps ── */
+      ScrollTrigger.create({
+        trigger: stepsRef.current,
+        start: "top 70%",
+        onEnter: () => {
+          gsap.fromTo(
+            stepsRef.current.querySelector("[data-anim='section-header']"),
+            { y: 40, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }
+          );
+          gsap.fromTo(
+            stepsRef.current.querySelectorAll("[data-anim='step-item']"),
+            { x: (i) => (i % 2 === 0 ? -40 : 40), opacity: 0 },
+            {
+              x: 0, opacity: 1, duration: 0.6, ease: "power3.out",
+              stagger: 0.15,
+            }
+          );
+        },
+        once: true,
+      });
+
+      /* ── CTA ── */
+      ScrollTrigger.create({
+        trigger: ctaRef.current,
+        start: "top 75%",
+        onEnter: () => {
+          gsap.fromTo(
+            ctaRef.current,
+            { scale: 0.88, opacity: 0 },
+            { scale: 1, opacity: 1, duration: 0.7, ease: "back.out(1.4)" }
+          );
+        },
+        once: true,
+      });
+    });
+
+    return () => ctx.revert();
+  }, []);
 
   return (
     <div className="min-h-screen bg-white font-sans text-[#23262F] overflow-hidden">
@@ -146,10 +259,10 @@ export default function Landing() {
             </nav>
 
             <div className="flex items-center gap-3">
-              <Link to="/login" className="btn btn-text text-sm !px-4 !py-2 hidden sm:inline-flex">
+              <Link to="/login" className="text-sm font-semibold text-[#6B7280] hover:text-[#23262F] transition-colors hidden sm:block">
                 Masuk
               </Link>
-              <Link to="/register" className="btn btn-primary text-sm !px-4 !py-2 !rounded-xl">
+              <Link to="/register" className="btn btn-primary text-sm !px-5 !py-2.5 !rounded-xl">
                 Daftar Gratis
               </Link>
             </div>
@@ -158,61 +271,64 @@ export default function Landing() {
       </header>
 
       {/* Hero */}
-      <section
-        ref={heroRef}
-        className="relative pt-10 sm:pt-14 lg:pt-20 pb-16 sm:pb-24 lg:pb-32 px-4"
-      >
-        <div className="absolute inset-0 bg-gradient-to-b from-[#EEF2FF] via-white to-white pointer-events-none" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[#2936C4]/[0.03] rounded-full blur-3xl pointer-events-none" />
+      <section ref={heroRef} className="relative pt-10 sm:pt-14 lg:pt-20 pb-16 sm:pb-24 lg:pb-32 px-4">
+        {/* Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#EEF2FF] via-white to-white pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[700px] bg-gradient-to-br from-[#2936C4]/8 via-[#66D3CC]/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+
+        {/* Decorative grid */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(41,54,196,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(41,54,196,0.03)_1px,transparent_1px)] bg-[length:60px_60px] pointer-events-none" />
+
+        {/* Floating particles */}
+        <div data-anim="float-particle" className="absolute top-24 left-[8%] w-3 h-3 rounded-full bg-[#2936C4]/15 pointer-events-none" />
+        <div data-anim="float-particle" className="absolute top-36 right-[12%] w-5 h-5 rounded-full bg-[#66D3CC]/15 pointer-events-none" style={{ animationDelay: "0.4s" }} />
+        <div data-anim="float-particle" className="absolute bottom-28 left-[18%] w-4 h-4 rounded-full bg-[#2936C4]/10 pointer-events-none" style={{ animationDelay: "0.8s" }} />
+        <div data-anim="float-particle" className="absolute bottom-36 right-[22%] w-6 h-6 rounded-full bg-[#66D3CC]/10 pointer-events-none" style={{ animationDelay: "1.2s" }} />
+        <div data-anim="float-particle" className="absolute top-1/3 left-[5%] w-2 h-2 rounded-full bg-[#2936C4]/20 pointer-events-none" style={{ animationDelay: "0.6s" }} />
+
+        {/* Gradient orb */}
+        <div className="absolute top-1/4 right-[5%] w-64 h-64 bg-gradient-to-br from-[#66D3CC]/10 to-[#2936C4]/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
-            <div className={`text-center lg:text-left transition-all duration-700 ease-out ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EEF2FF] text-[#2936C4] text-xs sm:text-sm font-semibold mb-4 lg:mb-6">
-                <span className="w-2 h-2 rounded-full bg-[#2936C4] animate-pulse" />
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            <div className="text-center lg:text-left">
+              <div data-anim="hero-badge" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#2936C4]/8 text-[#2936C4] text-xs sm:text-sm font-semibold mb-4 lg:mb-6 border border-[#2936C4]/10">
                 All-in-One Business Management
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] mb-4 lg:mb-6">
+              <h1 data-anim="hero-heading" className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] mb-4 lg:mb-6">
                 Kelola Bisnismu
                 <br />
-                <span className="text-[#2936C4]">Lebih Cerdas</span>
+                <span className="bg-gradient-to-r from-[#2936C4] to-[#66D3CC] bg-clip-text text-transparent">Lebih Cerdas</span>
               </h1>
 
-              <p className="text-sm sm:text-base lg:text-lg text-[#6B7280] max-w-lg mx-auto lg:mx-0 mb-6 lg:mb-8 leading-relaxed">
+              <p data-anim="hero-sub" className="text-sm sm:text-base lg:text-lg text-[#6B7280] max-w-lg mx-auto lg:mx-0 mb-6 lg:mb-8 leading-relaxed">
                 Platform manajemen bisnis all-in-one: kasir, stok, keuangan, dan insight AI.
                 Dirancang khusus untuk UMKM dan bisnis ritel Indonesia.
               </p>
 
-              <div className="flex flex-col sm:flex-row items-center gap-3 justify-center lg:justify-start">
-                <Link to="/register" className="btn btn-primary text-sm sm:text-base !px-8 !py-3.5 w-full sm:w-auto">
+              <div data-anim="hero-btns" className="flex flex-col sm:flex-row items-center gap-3 justify-center lg:justify-start">
+                <Link to="/register" className="btn btn-primary text-sm sm:text-base !px-8 !py-3.5 w-full sm:w-auto shadow-lg shadow-[#2936C4]/25 hover:shadow-xl hover:shadow-[#2936C4]/30 transition-shadow">
                   Mulai Gratis
                 </Link>
                 <a href="#fitur" className="btn btn-secondary text-sm sm:text-base !px-8 !py-3.5 w-full sm:w-auto">
                   Lihat Fitur
                 </a>
               </div>
-
             </div>
 
             {/* Hero Image */}
-            <div className={`relative flex items-center justify-center transition-all duration-700 delay-200 ease-out ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
-              <div className="relative w-full max-w-[400px] lg:max-w-none flex justify-center">
-                <img
-                  src="/screenshots/dashboard-mobile.png"
-                  alt="Dashboard Mobile"
-                  className="w-full max-w-[280px] sm:max-w-[320px] h-auto animate-float"
-                />
-              </div>
+            <div data-anim="hero-phone" className="flex items-center justify-center lg:justify-end">
+              <PhoneMockup src="/screenshots/dashboard-mobile.png" alt="Dashboard Mobile" />
             </div>
           </div>
         </div>
       </section>
 
       {/* Features */}
-      <section id="fitur" ref={featuresRef} className="py-12 sm:py-16 lg:py-24 px-4">
+      <section id="fitur" ref={featuresRef} className="py-12 sm:py-16 lg:py-24 px-4 bg-[#F8FAFC]">
         <div className="max-w-7xl mx-auto">
-          <div className={`text-center mb-12 sm:mb-16 transition-all duration-700 ease-out ${featuresVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div data-anim="section-header" className="text-center mb-12 sm:mb-16">
             <span className="text-xs sm:text-sm font-bold uppercase tracking-widest text-[#2936C4]">Fitur</span>
             <h2 className="text-2xl sm:text-3xl lg:text-5xl font-extrabold mt-3 mb-4">
               Semua yang Anda Butuhkan
@@ -226,10 +342,10 @@ export default function Landing() {
             {features.map((f, i) => (
               <div
                 key={i}
-                className={`group relative bg-white border border-[#E6E8EC] rounded-2xl p-6 sm:p-8 hover:shadow-lg hover:border-[#2936C4]/20 hover:-translate-y-1 transition-all duration-300 ease-out ${featuresVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
-                style={{ transitionDelay: `${i * 100}ms` }}
+                data-anim="feature-card"
+                className="group relative bg-white rounded-2xl p-6 sm:p-8 border border-[#E6E8EC] hover:border-[#2936C4]/20 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300"
               >
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-[#EEF2FF] flex items-center justify-center text-[#2936C4] mb-5 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br from-[#EEF2FF] to-[#E0E7FF] flex items-center justify-center text-[#2936C4] mb-5 group-hover:scale-110 group-hover:rotate-2 transition-all duration-300 shadow-sm">
                   {f.icon}
                 </div>
                 <h3 className="text-lg sm:text-xl font-bold mb-2.5">{f.title}</h3>
@@ -240,10 +356,10 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Screenshots Preview */}
-      <section id="screenshot" ref={screenshotsRef} className="py-12 sm:py-16 lg:py-24 px-4 bg-[#F8FAFC]">
+      {/* Screenshot Preview */}
+      <section id="screenshot" ref={screenshotRef} className="py-12 sm:py-16 lg:py-24 px-4 bg-gradient-to-b from-[#F8FAFC] to-white">
         <div className="max-w-7xl mx-auto">
-          <div className={`text-center mb-12 sm:mb-16 transition-all duration-700 ease-out ${screenshotsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div data-anim="section-header" className="text-center mb-12 sm:mb-16">
             <span className="text-xs sm:text-sm font-bold uppercase tracking-widest text-[#2936C4]">Preview</span>
             <h2 className="text-2xl sm:text-3xl lg:text-5xl font-extrabold mt-3 mb-4">
               Lihat Tampilan Aplikasi
@@ -253,34 +369,12 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6 sm:gap-8 items-start">
-            {screenshots.map((s, i) => (
-              <div
-                key={i}
-                className={`group transition-all duration-500 ease-out ${screenshotsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
-                style={{ transitionDelay: `${i * 120}ms` }}
-              >
-                {s.file ? (
-                  <img
-                    src={`/screenshots/${s.file}`}
-                    alt={s.label}
-                    className="w-full h-auto rounded-xl shadow-sm group-hover:shadow-lg group-hover:-translate-y-1 transition-all duration-300"
-                  />
-                ) : (
-                  <div className="aspect-[4/3] rounded-xl bg-gradient-to-br from-[#EEF2FF] to-white border border-[#E6E8EC] flex flex-col items-center justify-center p-6 group-hover:shadow-lg group-hover:-translate-y-1 transition-all duration-300">
-                    <svg className="w-10 h-10 text-[#2936C4]/30 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.41a2.25 2.25 0 0 1 3.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-                    </svg>
-                    <span className="text-xs sm:text-sm text-center font-semibold text-[#8B95A7] group-hover:text-[#23262F] transition-colors">{s.label}</span>
-                    <span className="text-[10px] sm:text-xs text-center text-[#8B95A7] mt-1">{s.desc}</span>
-                  </div>
-                )}
-              </div>
-            ))}
+          <div data-anim="screenshot-laptop" className="-mx-2 sm:mx-0">
+            <LaptopMockup src="/screenshots/keuangan-desktop.png" alt="Keuangan" />
           </div>
 
-          <div className={`mt-10 text-center transition-all duration-700 ease-out delay-300 ${screenshotsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <Link to="/register" className="btn btn-primary text-sm sm:text-base !px-8 !py-3.5">
+          <div data-anim="screenshot-cta" className="mt-12 text-center">
+            <Link to="/register" className="btn btn-primary text-sm sm:text-base !px-8 !py-3.5 shadow-lg shadow-[#2936C4]/25">
               Coba Gratis Sekarang
             </Link>
           </div>
@@ -290,7 +384,7 @@ export default function Landing() {
       {/* How It Works */}
       <section id="cara-kerja" ref={stepsRef} className="py-12 sm:py-16 lg:py-24 px-4">
         <div className="max-w-4xl mx-auto">
-          <div className={`text-center mb-12 sm:mb-16 transition-all duration-700 ease-out ${stepsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div data-anim="section-header" className="text-center mb-12 sm:mb-16">
             <span className="text-xs sm:text-sm font-bold uppercase tracking-widest text-[#2936C4]">Cara Kerja</span>
             <h2 className="text-2xl sm:text-3xl lg:text-5xl font-extrabold mt-3 mb-4">
               Mulai dalam 4 Langkah
@@ -301,21 +395,21 @@ export default function Landing() {
           </div>
 
           <div className="relative">
-            <div className="hidden sm:block absolute left-1/2 -translate-x-0.5 top-0 bottom-0 w-0.5 bg-[#E6E8EC]" />
+            <div className="hidden sm:block absolute left-1/2 -translate-x-0.5 top-0 bottom-0 w-0.5 bg-gradient-to-b from-[#2936C4]/30 via-[#66D3CC]/30 to-transparent" />
             <div className="space-y-8 sm:space-y-12">
               {steps.map((step, i) => (
                 <div
                   key={i}
-                  className={`relative flex flex-col sm:flex-row items-center gap-6 sm:gap-8 ${i % 2 === 0 ? 'sm:flex-row' : 'sm:flex-row-reverse'} transition-all duration-700 ease-out ${stepsVisible ? 'opacity-100 translate-x-0' : `opacity-0 ${i % 2 === 0 ? '-translate-x-8' : 'translate-x-8'}`}`}
-                  style={{ transitionDelay: `${i * 150}ms` }}
+                  data-anim="step-item"
+                  className={`relative flex flex-col sm:flex-row items-center gap-6 sm:gap-8 ${i % 2 === 0 ? 'sm:flex-row' : 'sm:flex-row-reverse'}`}
                 >
                   <div className="flex-1 text-center sm:text-left">
-                    <span className="text-[#2936C4]/20 text-5xl sm:text-6xl font-extrabold select-none">{step.number}</span>
+                    <span className="text-[#2936C4]/15 text-5xl sm:text-7xl font-extrabold select-none leading-none block mb-1">{step.number}</span>
                     <h3 className="text-xl sm:text-2xl font-bold mt-1 mb-2">{step.title}</h3>
                     <p className="text-[#6B7280]">{step.desc}</p>
                   </div>
                   <div className="relative flex-shrink-0">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#2936C4] flex items-center justify-center text-white font-extrabold text-lg shadow-lg shadow-[#2936C4]/20 z-10 relative transition-transform duration-300 hover:scale-110">
+                    <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-[#2936C4] to-[#3d4ad7] flex items-center justify-center text-white font-extrabold text-lg shadow-lg shadow-[#2936C4]/30 z-10 relative transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-[#2936C4]/40">
                       {i + 1}
                     </div>
                   </div>
@@ -329,9 +423,10 @@ export default function Landing() {
 
       {/* CTA */}
       <section ref={ctaRef} className="py-12 sm:py-16 lg:py-24 px-4">
-        <div className={`max-w-4xl mx-auto text-center bg-gradient-to-br from-[#2936C4] to-[#1a1f7a] rounded-3xl p-8 sm:p-16 relative overflow-hidden transition-all duration-700 ease-out ${ctaVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#66D3CC]/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl" />
+        <div className="max-w-4xl mx-auto text-center bg-gradient-to-br from-[#2936C4] via-[#3843d1] to-[#1a1f7a] rounded-3xl p-8 sm:p-16 relative overflow-hidden shadow-2xl shadow-[#2936C4]/30">
+          <div className="absolute top-0 right-0 w-72 h-72 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-56 h-56 bg-[#66D3CC]/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMSIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
 
           <div className="relative">
             <h2 className="text-2xl sm:text-3xl lg:text-5xl font-extrabold text-white mb-4">
@@ -341,7 +436,7 @@ export default function Landing() {
               Bergabung dengan 500+ bisnis lainnya. Gratis, tanpa ribet, tanpa kartu kredit.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link to="/register" className="group inline-flex items-center gap-2 bg-white text-[#2936C4] font-bold px-8 py-3.5 rounded-xl hover:bg-[#EEF2FF] hover:scale-[1.02] transition-all duration-200 text-sm sm:text-base shadow-lg">
+              <Link to="/register" className="group inline-flex items-center gap-2 bg-white text-[#2936C4] font-bold px-8 py-3.5 rounded-xl hover:bg-[#EEF2FF] hover:scale-[1.02] transition-all duration-200 text-sm sm:text-base shadow-xl">
                 Daftar Gratis Sekarang
                 <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />

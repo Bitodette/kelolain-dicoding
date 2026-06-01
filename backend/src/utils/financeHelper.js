@@ -121,13 +121,17 @@ function buildTrend({ period, start, end, transactions }) {
 
     if (days <= 120) {
         const weekCount = Math.ceil(days / 7);
-        const buckets = Array.from({ length: weekCount }, (_, idx) => ({
-            key: String(idx + 1),
-            label: `W${idx + 1}`,
-            pemasukan: 0,
-            pengeluaran: 0,
-            keuntunganBersih: 0,
-        }));
+        const buckets = Array.from({ length: weekCount }, (_, idx) => {
+            const ws = new Date(start);
+            ws.setDate(start.getDate() + idx * 7);
+            return {
+                key: String(idx + 1),
+                label: formatIdShortDate(ws),
+                pemasukan: 0,
+                pengeluaran: 0,
+                keuntunganBersih: 0,
+            };
+        });
         for (const t of transactions) {
             const dt = new Date(t.createdAt);
             const offsetDays = Math.floor((dt.getTime() - start.getTime()) / 86400000);

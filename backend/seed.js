@@ -63,7 +63,18 @@ function calcCogs(cart) {
 }
 
 const monthConfig = [
-  { year: 2025, month: 11, dailyAvg: 280000, growth: 1.00 },
+  { year: 2025, month: 0, dailyAvg: 130000, growth: 1.00 },
+  { year: 2025, month: 1, dailyAvg: 140000, growth: 1.02 },
+  { year: 2025, month: 2, dailyAvg: 150000, growth: 1.05 },
+  { year: 2025, month: 3, dailyAvg: 165000, growth: 1.08 },
+  { year: 2025, month: 4, dailyAvg: 175000, growth: 1.10 },
+  { year: 2025, month: 5, dailyAvg: 185000, growth: 1.12 },
+  { year: 2025, month: 6, dailyAvg: 195000, growth: 1.14 },
+  { year: 2025, month: 7, dailyAvg: 210000, growth: 1.16 },
+  { year: 2025, month: 8, dailyAvg: 225000, growth: 1.17 },
+  { year: 2025, month: 9, dailyAvg: 245000, growth: 1.18 },
+  { year: 2025, month: 10, dailyAvg: 260000, growth: 1.19 },
+  { year: 2025, month: 11, dailyAvg: 280000, growth: 1.20 },
   { year: 2026, month: 0, dailyAvg: 310000, growth: 1.08 },
   { year: 2026, month: 1, dailyAvg: 340000, growth: 1.16 },
   { year: 2026, month: 2, dailyAvg: 380000, growth: 1.25 },
@@ -90,10 +101,15 @@ function mkExpense(label, category, amount, year, month, day, hour, minute = 0) 
 function generateExpenses() {
   const list = [];
   const months = [
-    { year: 2025, month: 11 }, { year: 2026, month: 0 },
-    { year: 2026, month: 1 }, { year: 2026, month: 2 },
-    { year: 2026, month: 3 }, { year: 2026, month: 4 },
-    { year: 2026, month: 5 },
+    { year: 2025, month: 0 }, { year: 2025, month: 1 },
+    { year: 2025, month: 2 }, { year: 2025, month: 3 },
+    { year: 2025, month: 4 }, { year: 2025, month: 5 },
+    { year: 2025, month: 6 }, { year: 2025, month: 7 },
+    { year: 2025, month: 8 }, { year: 2025, month: 9 },
+    { year: 2025, month: 10 }, { year: 2025, month: 11 },
+    { year: 2026, month: 0 }, { year: 2026, month: 1 },
+    { year: 2026, month: 2 }, { year: 2026, month: 3 },
+    { year: 2026, month: 4 }, { year: 2026, month: 5 },
   ];
 
   for (const { year, month } of months) {
@@ -158,6 +174,11 @@ function generateExpenses() {
     ['Servis AC toko', 'Operasional', 400000, 2026, 4, 22, 10],
     ['Perpanjangan NIB & legalitas', 'Pengeluaran Lainnya', 350000, 2026, 2, 20, 9],
     ['Beli rak display tambahan', 'Operasional', 550000, 2026, 3, 5, 10],
+    ['Biaya renovasi toko', 'Operasional', 1500000, 2025, 2, 15, 9],
+    ['Beli komputer kasir', 'Operasional', 3200000, 2025, 5, 10, 10],
+    ['Acara grand opening', 'Promosi & Iklan', 500000, 2025, 0, 20, 9],
+    ['Pasang CCTV toko', 'Operasional', 750000, 2025, 8, 5, 10],
+    ['Sumbangan PHBI', 'Pengeluaran Lainnya', 300000, 2025, 9, 12, 10],
   ];
   for (const [label, cat, amount, y, m, d, h] of oneTime) {
     list.push(mkExpense(label, cat, amount, y, m, d, h));
@@ -168,7 +189,7 @@ function generateExpenses() {
 
 function generateAll() {
   const list = [];
-  const start = new Date('2025-12-01');
+  const start = new Date('2025-01-01');
   const end = new Date('2026-06-01');
 
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
@@ -228,6 +249,9 @@ function generateAll() {
     ['Cashback supplier', 150000, 2026, 0, 20, 10],
     ['Penjualan aset bekas', 450000, 2026, 2, 25, 14],
     ['Pengembalian deposit', 200000, 2026, 4, 12, 10],
+    ['Cashback promo distributor', 120000, 2025, 3, 15, 10],
+    ['Penjualan barang display lama', 350000, 2025, 7, 20, 11],
+    ['Pendapatan sewa tempat parkir', 500000, 2025, 10, 5, 9],
   ];
   for (const [label, amount, y, m, d, h] of otherIncome) {
     const dt = new Date(y, m, d, h, 0, 0, 0);
@@ -347,25 +371,23 @@ async function main() {
 
   // --- generate & insert ---
   const all = generateAll();
-  let inserted = 0;
-  for (const tx of all) {
-    await prisma.transactions.create({
-      data: {
-        organizationId: orgId,
-        label: tx.label,
-        type: tx.type,
-        category: tx.category,
-        amount: tx.amount,
-        cogs: tx.cogs,
-        createdAt: tx.createdAt,
-        items: tx.items,
-      },
-    });
-    inserted++;
-    if (inserted % 200 === 0) console.log(`  ${inserted} transaksi...`);
+  const batchSize = 500;
+  for (let i = 0; i < all.length; i += batchSize) {
+    const batch = all.slice(i, i + batchSize).map(tx => ({
+      organizationId: orgId,
+      label: tx.label,
+      type: tx.type,
+      category: tx.category,
+      amount: tx.amount,
+      cogs: tx.cogs,
+      createdAt: tx.createdAt,
+      items: tx.items,
+    }));
+    await prisma.transactions.createMany({ data: batch });
+    console.log(`  ${Math.min(i + batchSize, all.length)}/${all.length} transaksi...`);
   }
 
-  console.log(`  Selesai: ${inserted} transaksi (${all.filter(t => t.type === 'Masuk').length} penjualan, ${all.filter(t => t.type === 'Keluar').length} pengeluaran).`);
+  console.log(`  Selesai: ${all.length} transaksi (${all.filter(t => t.type === 'Masuk').length} penjualan, ${all.filter(t => t.type === 'Keluar').length} pengeluaran).`);
   console.log('');
   console.log('  Login: username=test, password=admin');
 }

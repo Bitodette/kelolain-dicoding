@@ -7,13 +7,14 @@ import {
     SparklesIcon, 
     ChevronDownIcon, 
     PlusIcon,
+    MinusIcon,
     PencilSquareIcon,
     TrashIcon,
     EyeIcon,
     XMarkIcon,
     BanknotesIcon,
-    ArrowTrendingUpIcon,
-    ArrowTrendingDownIcon
+    ArrowUpIcon,
+    ArrowDownIcon
 } from "@heroicons/react/24/outline";
 import {
     ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell,
@@ -449,7 +450,7 @@ export default function Keuangan() {
                 <div className="p-4 sm:p-5 border-2 border-[#E6E8EC] rounded-xl bg-white flex flex-col gap-2.5">
                     <div className="flex items-center gap-2.5">
                         <div className="p-2 rounded-lg bg-indigo-50">
-                            <ArrowTrendingUpIcon className="w-4 h-4 text-[#2936C4]" />
+                            <PlusIcon className="w-4 h-4 text-[#2936C4]" />
                         </div>
                         <p className="text-xs font-semibold text-[#6B7280]">Pemasukan</p>
                     </div>
@@ -457,9 +458,9 @@ export default function Keuangan() {
                     {comparison?.pemasukan?.previous > 0 && (
                         <div className="flex items-center gap-1.5 text-xs">
                             {comparison.pemasukan.change > 0 ? (
-                                <ArrowTrendingUpIcon className="w-3.5 h-3.5 text-emerald-500" />
+                                <ArrowUpIcon className="w-3.5 h-3.5 text-emerald-500" />
                             ) : (
-                                <ArrowTrendingDownIcon className="w-3.5 h-3.5 text-red-500" />
+                                <ArrowDownIcon className="w-3.5 h-3.5 text-red-500" />
                             )}
                             <span className={comparison.pemasukan.change > 0 ? "font-semibold text-emerald-600" : "font-semibold text-red-500"}>
                                 {Math.abs(comparison.pemasukan.change)}%
@@ -472,7 +473,7 @@ export default function Keuangan() {
                 <div className="p-4 sm:p-5 border-2 border-[#E6E8EC] rounded-xl bg-white flex flex-col gap-2.5">
                     <div className="flex items-center gap-2.5">
                         <div className="p-2 rounded-lg bg-rose-50">
-                            <ArrowTrendingDownIcon className="w-4 h-4 text-rose-500" />
+                            <MinusIcon className="w-4 h-4 text-rose-500" />
                         </div>
                         <p className="text-xs font-semibold text-[#6B7280]">Pengeluaran</p>
                     </div>
@@ -480,9 +481,9 @@ export default function Keuangan() {
                     {comparison?.pengeluaran?.previous > 0 && (
                         <div className="flex items-center gap-1.5 text-xs">
                             {comparison.pengeluaran.change > 0 ? (
-                                <ArrowTrendingUpIcon className="w-3.5 h-3.5 text-red-500" />
+                                <ArrowUpIcon className="w-3.5 h-3.5 text-red-500" />
                             ) : (
-                                <ArrowTrendingDownIcon className="w-3.5 h-3.5 text-emerald-500" />
+                                <ArrowDownIcon className="w-3.5 h-3.5 text-emerald-500" />
                             )}
                             <span className={comparison.pengeluaran.change > 0 ? "font-semibold text-red-500" : "font-semibold text-emerald-600"}>
                                 {Math.abs(comparison.pengeluaran.change)}%
@@ -505,9 +506,9 @@ export default function Keuangan() {
                     {comparison?.keuntunganBersih?.previous > 0 && (
                         <div className="flex items-center gap-1.5 text-xs">
                             {comparison.keuntunganBersih.change > 0 ? (
-                                <ArrowTrendingUpIcon className="w-3.5 h-3.5 text-emerald-500" />
+                                <ArrowUpIcon className="w-3.5 h-3.5 text-emerald-500" />
                             ) : (
-                                <ArrowTrendingDownIcon className="w-3.5 h-3.5 text-red-500" />
+                                <ArrowDownIcon className="w-3.5 h-3.5 text-red-500" />
                             )}
                             <span className={comparison.keuntunganBersih.change > 0 ? "font-semibold text-emerald-600" : "font-semibold text-red-500"}>
                                 {Math.abs(comparison.keuntunganBersih.change)}%
