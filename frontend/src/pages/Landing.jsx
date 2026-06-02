@@ -2,6 +2,15 @@ import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import {
+  ShoppingCartIcon,
+  BanknotesIcon,
+  CubeIcon,
+  SparklesIcon,
+  Cog6ToothIcon,
+  ChartBarIcon,
+  ArrowRightIcon,
+} from "@heroicons/react/24/outline";
 import Logo from "../components/Logo";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -9,54 +18,42 @@ gsap.registerPlugin(ScrollTrigger);
 const features = [
   {
     icon: (
-      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 0 4.5 6h.75m13.5 0h.75a.75.75 0 0 0 .75-.75V4.5M19.5 4.5v15a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.75A2.25 2.25 0 0 1 6.75 4.5h12.75Z" />
-      </svg>
+      <ShoppingCartIcon className="w-7 h-7" />
     ),
     title: "Kasir Cepat & Mudah",
     desc: "Transaksi point-of-sale yang intuitif dengan tampilan seperti tablet. Cocok untuk ritel, kuliner, dan UMKM.",
   },
   {
     icon: (
-      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-      </svg>
+      <BanknotesIcon className="w-7 h-7" />
     ),
     title: "Manajemen Keuangan",
     desc: "Pantau pemasukan, pengeluaran, dan laba bersih secara real-time. Lengkap dengan laporan keuangan & grafik interaktif.",
   },
   {
     icon: (
-      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
-      </svg>
+      <CubeIcon className="w-7 h-7" />
     ),
     title: "Manajemen Stok Produk",
     desc: "Kelola inventaris dengan mudah, lengkap dengan scanner OCR untuk input stok dari nota. Pantau stok menipis secara otomatis.",
   },
   {
     icon: (
-      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5m.75-9 3-3 2.148 2.148A12.061 12.061 0 0 1 16.5 7.605" />
-      </svg>
+      <SparklesIcon className="w-7 h-7" />
     ),
     title: "Prediksi & Insight AI",
     desc: "Dapatkan prediksi pendapatan 7 hari ke depan dan rekomendasi bundling produk berdasarkan data penjualan Anda.",
   },
   {
     icon: (
-      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
-      </svg>
+      <Cog6ToothIcon className="w-7 h-7" />
     ),
     title: "Kustomisasi & Role",
     desc: "Atur akses pengguna berdasarkan peran. Setiap karyawan bisa memiliki tampilan dan fitur yang berbeda sesuai kebutuhan.",
   },
   {
     icon: (
-      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z" />
-      </svg>
+      <ChartBarIcon className="w-7 h-7" />
     ),
     title: "Laporan Detail",
     desc: "Lihat riwayat transaksi lengkap, grafik tren pemasukan, dan breakdown pengeluaran per kategori dalam satu dashboard.",
@@ -408,7 +405,7 @@ export default function Landing() {
                     <h3 className="text-xl sm:text-2xl font-bold mt-1 mb-2">{step.title}</h3>
                     <p className="text-[#6B7280]">{step.desc}</p>
                   </div>
-                  <div className="relative flex-shrink-0">
+                  <div className="relative flex-shrink-0 hidden sm:block">
                     <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-[#2936C4] to-[#3d4ad7] flex items-center justify-center text-white font-extrabold text-lg shadow-lg shadow-[#2936C4]/30 z-10 relative transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-[#2936C4]/40">
                       {i + 1}
                     </div>
@@ -438,9 +435,7 @@ export default function Landing() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link to="/register" className="group inline-flex items-center gap-2 bg-white text-[#2936C4] font-bold px-8 py-3.5 rounded-xl hover:bg-[#EEF2FF] hover:scale-[1.02] transition-all duration-200 text-sm sm:text-base shadow-xl">
                 Daftar Gratis Sekarang
-                <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                </svg>
+                <ArrowRightIcon className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </Link>
               <Link to="/login" className="inline-flex items-center gap-2 text-white/80 hover:text-white font-semibold px-6 py-3.5 rounded-xl border border-white/20 hover:border-white/40 transition-all duration-200 text-sm sm:text-base">
                 Sudah punya akun? Masuk
