@@ -175,10 +175,10 @@ export default function Dashboard() {
                     </div>
                     
                     <div className={`${lowStockItems.length > 0 ? 'grid-cols-2' : 'grid-cols-1'} grid w-full gap-3 mt-4 md:mt-0 md:flex md:w-auto`}>
-                        <button className={`btn btn-success w-full px-8 py-2.5 text-sm sm:text-base ${lowStockItems.length === 0 ? 'md:px-10' : ''}`}>
+                        <Link to="/kasir" className={`btn btn-success w-full px-8 py-2.5 text-sm sm:text-base text-center ${lowStockItems.length === 0 ? 'md:px-10' : ''}`}>
                             <ShoppingCartIcon className="h-5 w-5" />
                             <span>Kasir</span>
-                        </button>
+                        </Link>
                         <Link to="/produk" className="btn btn-primary w-full px-4 py-2.5 text-sm sm:text-base text-center">
                             <CubeIcon className="h-5 w-5" />
                             <span>Restock</span>
