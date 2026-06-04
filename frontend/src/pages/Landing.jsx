@@ -240,7 +240,7 @@ export default function Landing() {
     <div className="min-h-screen bg-white font-sans text-[#23262F] overflow-hidden">
       {/* Navbar */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-[#E6E8EC]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
             <Link to="/" className="flex items-center gap-2.5">
               <Logo className="flex-shrink-0 w-6 h-6" />
@@ -268,7 +268,7 @@ export default function Landing() {
       </header>
 
       {/* Hero */}
-      <section ref={heroRef} className="relative pt-10 sm:pt-14 lg:pt-20 pb-16 sm:pb-24 lg:pb-32 px-4">
+      <section ref={heroRef} className="relative pt-10 sm:pt-14 lg:pt-20 pb-16 sm:pb-24 lg:pb-32 px-4 lg:px-16">
         {/* Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#EEF2FF] via-white to-white pointer-events-none" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[700px] bg-gradient-to-br from-[#2936C4]/8 via-[#66D3CC]/5 to-transparent rounded-full blur-3xl pointer-events-none" />
@@ -287,7 +287,7 @@ export default function Landing() {
         <div className="absolute top-1/4 right-[5%] w-64 h-64 bg-gradient-to-br from-[#66D3CC]/10 to-[#2936C4]/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-start">
             <div className="text-center lg:text-left">
               <div data-anim="hero-badge" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#2936C4]/8 text-[#2936C4] text-xs sm:text-sm font-semibold mb-4 lg:mb-6 border border-[#2936C4]/10">
                 All-in-One Business Management
