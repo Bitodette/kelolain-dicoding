@@ -1039,28 +1039,22 @@ export default function Produk() {
                     addToast={addToast}
                     onConfirm={async (mappedItems) => {
                         console.log('Confirmed items:', mappedItems);
-                        const firstValidItem = mappedItems.find(item => item.linkedProduct && item.quantity > 0);
+                        const validItems = mappedItems.filter(item => item.linkedProduct?.id && item.quantity > 0);
+
+                        if (validItems.length === 0) {
+                            addToast('Tidak ada item yang perlu di-restock.', 'info');
+                            fetchProducts(page);
+                            setIsScanResultModalOpen(false);
+                            return;
+                        }
 
                         try {
-                            if (!firstValidItem) {
-                                addToast('Tidak ada item valid untuk direstock.', 'info');
-                                fetchProducts(page);
-                                setIsScanResultModalOpen(false);
-                                return;
+                            for (const item of validItems) {
+                                await axios.post(`${API_BASE}/api/products/${item.linkedProduct.id}/restock`, {
+                                    quantity: item.quantity,
+                                    costPrice: item.price,
+                                });
                             }
-
-                            if (!firstValidItem.linkedProduct?.id) {
-                                console.warn('Link product ID tidak tersedia, melewati restock.');
-                                addToast('Stok tidak dapat diperbarui karena data tidak lengkap.', 'warning');
-                                fetchProducts(page);
-                                setIsScanResultModalOpen(false);
-                                return;
-                            }
-
-                            await axios.post(`${API_BASE}/api/products/${firstValidItem.linkedProduct.id}/restock`, {
-                                quantity: firstValidItem.quantity,
-                                costPrice: firstValidItem.price,
-                            });
 
                             addToast('Stok berhasil diperbarui.', 'success');
                             fetchProducts(page);
@@ -1127,18 +1121,14 @@ function ScanResultModal({ isOpen, onClose, scannedItems, products, categories, 
                 }
                 try {
                     const selectedCategory = categories.find((cat) => cat.name === category);
-                    const newProductResponse = await axios.post(`${API_BASE}/api/products`, {
+                    await axios.post(`${API_BASE}/api/products`, {
                         name,
                         category: category || null,
                         categoryId: selectedCategory?.id ?? null,
                         price: parseInt(price),
-                        costPrice: item.price, // price from receipt should be unit price
+                        costPrice: item.price,
                         stock: item.quantity,
                         status: item.quantity > 0 ? (item.quantity <= 5 ? 'Menipis' : 'Aman') : 'Habis'
-                    });
-                    itemsToProcess.push({
-                        ...item,
-                        linkedProduct: newProductResponse.data,
                     });
                 } catch (err) {
                     console.error("Gagal membuat produk baru:", err);
@@ -1146,7 +1136,7 @@ function ScanResultModal({ isOpen, onClose, scannedItems, products, categories, 
                     return;
                 }
             } else if (item.linkedProductId) {
-                const product = products.find(p => p.id === item.linkedProductId);
+                const product = products.find(p => p.id === Number(item.linkedProductId));
                 if (product) {
                     itemsToProcess.push({ ...item, linkedProduct: product });
                 }
