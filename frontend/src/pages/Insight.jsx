@@ -206,7 +206,7 @@ export default function Insight() {
                 <div className="p-5 border-2 border-[#E6E8EC] rounded-xl bg-white flex flex-col">
                     <div className="flex items-center justify-between gap-4 mb-4">
                         <div>
-                            <p className="text-base font-semibold text-[#23262F]">Top 5 Produk Risiko Habis</p>
+                            <p className="text-base font-semibold text-[#23262F]">Produk Paling Cepat Habis</p>
                             <p className="text-xs text-[#6B7280] mt-1">Berdasarkan hasil prediksi demand AI.</p>
                         </div>
                     </div>
