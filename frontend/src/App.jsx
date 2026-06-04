@@ -154,7 +154,7 @@ function App() {
         <Sidebar activeTab={activeTab} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} allowedPages={allowedPages} />
       )}
 
-      <main className="w-screen flex-1 bg-white">
+      <main className="w-screen flex-1 bg-white overflow-x-hidden">
         {isAuthenticated && <Navbar activeTab={activeTab} setMobileOpen={setMobileOpen} onLogout={handleLogout} notifications={notifications} onMarkRead={markNotificationRead} onMarkAllRead={markAllNotificationsRead} />}
         <div className={isAuthenticated ? "px-4 sm:px-8 pb-8 mx-auto" : ""}>
           <Routes>
