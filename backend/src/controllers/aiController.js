@@ -462,7 +462,7 @@ exports.scanReceipt = asyncHandler(async (req, res) => {
 
         const extractResponse = await axios.post(`${RECEIPT_SCANNER_URL}/extract-text`, extractFormData, {
             headers: extractFormData.getHeaders(),
-            timeout: 30000,
+            timeout: 120000,
         });
 
         const extractData = extractResponse.data || {};
