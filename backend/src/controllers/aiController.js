@@ -106,7 +106,7 @@ const buildBundlingFallback = (bundlingData) => {
 };
 
 const safeAiRequest = async (url, payload) => {
-    const aiResponse = await axios.post(url, payload, { timeout: 15000 });
+    const aiResponse = await axios.post(url, payload, { timeout: 30000 });
     if (!aiResponse?.data || typeof aiResponse.data !== 'object') {
         throw new Error('Invalid AI response');
     }
@@ -330,14 +330,19 @@ exports.getBundlingSuggestion = asyncHandler(async (req, res) => {
 
     try {
         aiResponse = await safeAiRequest(`${AI_BASE_URL}/bundling`, payload);
-    } catch (err) {
-        console.error("AI Bundling fallback:", err.message, err.response ? { status: err.response.status, data: err.response.data } : undefined);
-        aiResponse = { result: buildBundlingFallback(bundlingData), fallback: true };
-    }
 
-    cache.bundling.key = cacheKey;
-    cache.bundling.data = aiResponse;
-    await saveCacheToFile(cache);
+        cache.bundling.key = cacheKey;
+        cache.bundling.data = aiResponse;
+        await saveCacheToFile(cache);
+    } catch (err) {
+        console.error("AI Bundling error:", err.message);
+
+        if (cache.bundling.data) {
+            return res.json(cache.bundling.data);
+        }
+
+        throw err;
+    }
 
     res.json(aiResponse);
 });

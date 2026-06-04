@@ -46,8 +46,8 @@ exports.createProduct = asyncHandler(async (req, res) => {
 
     const totalInitialCost = parsedStock > 0 ? parsedCost * parsedStock : 0;
 
-    const [product] = await prisma.$transaction([
-        prisma.product.create({
+    const [product] = await prisma.$transaction(async (tx) => {
+        const p = await tx.product.create({
             data: {
                 name,
                 category: categoryName,
@@ -65,9 +65,10 @@ exports.createProduct = asyncHandler(async (req, res) => {
                     } : undefined,
                 },
             }
-        }),
-        ...(parsedStock > 0 ? [
-            prisma.transactions.create({
+        });
+
+        if (parsedStock > 0) {
+            await tx.transactions.create({
                 data: {
                     organizationId: orgId,
                     label: `Tambah produk ${name}`,
@@ -75,11 +76,13 @@ exports.createProduct = asyncHandler(async (req, res) => {
                     category: 'Restock Barang',
                     amount: totalInitialCost,
                     cogs: 0,
-                    items: null,
+                    items: { products: [{ productId: p.id, qty: parsedStock, costPrice: parsedCost }] },
                 }
-            })
-        ] : []),
-    ]);
+            });
+        }
+
+        return [p];
+    });
 
     res.status(201).json(product);
 });
@@ -178,7 +181,7 @@ exports.restockProduct = asyncHandler(async (req, res) => {
                 category: 'Restock Barang',
                 amount: totalRestockCost,
                 cogs: 0,
-                items: null,
+                items: { products: [{ productId: id, qty: restockQty, costPrice: restockCost }] },
             }
         }),
     ]);

@@ -102,6 +102,84 @@ async function computeFifoCogsAndUpdateBatches(cart, orgId) {
     return cogs;
 }
 
+async function reverseFifoCogsAndUpdateBatches(cart, orgId) {
+    const normalizedCart = cart
+        .map((line) => ({
+            productId: Number(line?.productId),
+            qty: Number(line?.qty) || 0,
+            costPrice: Number(line?.costPrice) || 0,
+        }))
+        .filter((line) => Number.isFinite(line.productId) && line.qty > 0);
+
+    if (normalizedCart.length === 0) return;
+
+    await prisma.$transaction(async (tx) => {
+        for (const line of normalizedCart) {
+            await tx.productBatch.create({
+                data: {
+                    productId: line.productId,
+                    costPrice: line.costPrice,
+                    initialQty: line.qty,
+                    currentQty: line.qty,
+                }
+            });
+
+            const product = await tx.product.findUnique({
+                where: { id: line.productId },
+                select: { id: true, stock: true },
+            });
+
+            if (product) {
+                const newStock = Number(product.stock || 0) + line.qty;
+                await tx.product.update({
+                    where: { id: line.productId },
+                    data: { stock: newStock, status: getStatusFromStock(newStock) },
+                });
+            }
+        }
+    });
+}
+
+async function reverseRestockItems(items, orgId) {
+    const products = items?.products;
+    if (!Array.isArray(products) || products.length === 0) return;
+
+    await prisma.$transaction(async (tx) => {
+        for (const item of products) {
+            const productId = Number(item?.productId);
+            const qty = Number(item?.qty) || 0;
+            if (!Number.isFinite(productId) || qty <= 0) continue;
+
+            const batch = await tx.productBatch.findFirst({
+                where: { productId, initialQty: qty, currentQty: { gte: 0 } },
+                orderBy: { createdAt: 'desc' },
+            });
+
+            const reduceQty = batch ? Math.min(qty, Number(batch.currentQty)) : qty;
+
+            if (batch && reduceQty > 0) {
+                await tx.productBatch.update({
+                    where: { id: batch.id },
+                    data: { currentQty: Number(batch.currentQty) - reduceQty },
+                });
+            }
+
+            const product = await tx.product.findUnique({
+                where: { id: productId },
+                select: { id: true, stock: true },
+            });
+
+            if (product) {
+                const newStock = Math.max(0, Number(product.stock || 0) - reduceQty);
+                await tx.product.update({
+                    where: { id: productId },
+                    data: { stock: newStock, status: getStatusFromStock(newStock) },
+                });
+            }
+        }
+    });
+}
+
 const normalizeTypeWrite = (value) => {
     const ty = String(value || '').toLowerCase().trim();
     if (['pemasukan', 'income', 'masuk'].includes(ty)) return 'Masuk';
@@ -232,7 +310,86 @@ exports.updateTransaction = asyncHandler(async (req, res) => {
 
 exports.deleteTransaction = asyncHandler(async (req, res) => {
     const id = Number(req.params.id);
-    const deleteResult = await prisma.transactions.deleteMany({ where: { id, organizationId: req.user.organizationId } });
-    if (deleteResult.count === 0) return res.status(404).json({ error: 'Transaksi tidak ditemukan' });
+
+    const tx = await prisma.transactions.findFirst({ where: { id, organizationId: req.user.organizationId } });
+    if (!tx) return res.status(404).json({ error: 'Transaksi tidak ditemukan' });
+
+    await prisma.$transaction(async (txn) => {
+        if (tx.type === 'Masuk') {
+            const cart = getCartFromItems(tx.items);
+            if (cart.length > 0) {
+                const normalizedCart = cart
+                    .map((line) => ({
+                        productId: Number(line?.productId),
+                        qty: Number(line?.qty) || 0,
+                        costPrice: Number(line?.costPrice) || 0,
+                    }))
+                    .filter((line) => Number.isFinite(line.productId) && line.qty > 0);
+
+                for (const line of normalizedCart) {
+                    await txn.productBatch.create({
+                        data: {
+                            productId: line.productId,
+                            costPrice: line.costPrice,
+                            initialQty: line.qty,
+                            currentQty: line.qty,
+                        }
+                    });
+
+                    const product = await txn.product.findUnique({
+                        where: { id: line.productId },
+                        select: { id: true, stock: true },
+                    });
+
+                    if (product) {
+                        const newStock = Number(product.stock || 0) + line.qty;
+                        await txn.product.update({
+                            where: { id: line.productId },
+                            data: { stock: newStock, status: getStatusFromStock(newStock) },
+                        });
+                    }
+                }
+            }
+        } else if (tx.type === 'Keluar' && tx.category === 'Restock Barang') {
+            const restockProducts = tx.items?.products;
+            if (Array.isArray(restockProducts) && restockProducts.length > 0) {
+                for (const item of restockProducts) {
+                    const productId = Number(item?.productId);
+                    const qty = Number(item?.qty) || 0;
+                    if (!Number.isFinite(productId) || qty <= 0) continue;
+
+                    const batch = await txn.productBatch.findFirst({
+                        where: { productId, initialQty: qty, currentQty: { gte: 0 } },
+                        orderBy: { createdAt: 'desc' },
+                    });
+
+                    const reduceQty = batch ? Math.min(qty, Number(batch.currentQty)) : qty;
+
+                    if (batch && reduceQty > 0) {
+                        await txn.productBatch.update({
+                            where: { id: batch.id },
+                            data: { currentQty: Number(batch.currentQty) - reduceQty },
+                        });
+                    }
+
+                    const product = await txn.product.findUnique({
+                        where: { id: productId },
+                        select: { id: true, stock: true },
+                    });
+
+                    if (product) {
+                        const newStock = Math.max(0, Number(product.stock || 0) - reduceQty);
+                        await txn.product.update({
+                            where: { id: productId },
+                            data: { stock: newStock, status: getStatusFromStock(newStock) },
+                        });
+                    }
+                }
+            }
+        }
+
+        await txn.transactions.deleteMany({ where: { id, organizationId: req.user.organizationId } });
+    });
+
     res.json({ message: 'Transaksi berhasil dihapus' });
 });
