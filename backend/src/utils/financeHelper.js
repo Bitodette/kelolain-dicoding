@@ -1,15 +1,7 @@
 const { formatIdMonth, formatIdShortDate } = require('./dateHelper');
+const { isIncome, isExpense } = require('./txType');
 
 function buildTrend({ period, start, end, transactions }) {
-    const normalizeType = (value) => String(value || '').toLowerCase().trim();
-    const isIncome = (t) => {
-        const ty = normalizeType(t.type);
-        return ty === 'masuk' || ty === 'pemasukan' || ty === 'income';
-    };
-    const isExpense = (t) => {
-        const ty = normalizeType(t.type);
-        return ty === 'keluar' || ty === 'pengeluaran' || ty === 'expense';
-    };
     const add = (acc, key, amount) => {
         acc[key] = (acc[key] || 0) + (Number(amount) || 0);
         return acc;
@@ -22,101 +14,61 @@ function buildTrend({ period, start, end, transactions }) {
         return 0;
     };
 
-    if (period === 'week') {
-        const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-        const buckets = Array.from({ length: 7 }, (_, i) => {
+    function emptyBucket(key, label) {
+        return { key, label, pemasukan: 0, pengeluaran: 0, keuntunganBersih: 0 };
+    }
+
+    function makeDayBuckets(count, labelFn) {
+        return Array.from({ length: count }, (_, i) => {
             const d = new Date(start);
             d.setDate(start.getDate() + i);
-            return {
-                key: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`,
-                label: dayNames[d.getDay()],
-                pemasukan: 0,
-                pengeluaran: 0,
-                keuntunganBersih: 0,
-            };
+            return emptyBucket(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`, labelFn(d, i));
         });
-        const bucketByKey = new Map(buckets.map((b) => [b.key, b]));
-        for (const t of transactions) {
+    }
+
+    function keyByDay(buckets) {
+        const map = new Map(buckets.map((b) => [b.key, b]));
+        return (t) => {
             const dt = new Date(t.createdAt);
-            const key = `${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`;
-            const b = bucketByKey.get(key);
+            return map.get(`${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`);
+        };
+    }
+
+    function populate(buckets, findBucket) {
+        for (const t of transactions) {
+            const b = findBucket(t);
             if (!b) continue;
             if (isIncome(t)) add(b, 'pemasukan', t.amount);
             if (isExpense(t)) add(b, 'pengeluaran', t.amount);
             add(b, 'keuntunganBersih', getProfitDelta(t));
         }
         return buckets;
+    }
+
+    if (period === 'week') {
+        const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+        const buckets = makeDayBuckets(7, (d) => dayNames[d.getDay()]);
+        return populate(buckets, keyByDay(buckets));
     }
 
     if (period === 'month') {
         const dayCount = Math.ceil((end.getTime() - start.getTime()) / 86400000);
-        const buckets = Array.from({ length: dayCount + 1 }, (_, i) => {
-            const d = new Date(start);
-            d.setDate(start.getDate() + i);
-            return {
-                key: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`,
-                label: formatIdShortDate(d),
-                pemasukan: 0,
-                pengeluaran: 0,
-                keuntunganBersih: 0,
-            };
-        });
-        const bucketByKey = new Map(buckets.map((b) => [b.key, b]));
-        for (const t of transactions) {
-            const dt = new Date(t.createdAt);
-            const key = `${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`;
-            const b = bucketByKey.get(key);
-            if (!b) continue;
-            if (isIncome(t)) add(b, 'pemasukan', t.amount);
-            if (isExpense(t)) add(b, 'pengeluaran', t.amount);
-            add(b, 'keuntunganBersih', getProfitDelta(t));
-        }
-        return buckets;
+        const buckets = makeDayBuckets(dayCount + 1, (d) => formatIdShortDate(d));
+        return populate(buckets, keyByDay(buckets));
     }
 
     if (period === 'year') {
-        const buckets = Array.from({ length: 12 }, (_, idx) => ({
-            key: String(idx),
-            label: formatIdMonth(new Date(start.getFullYear(), idx, 1)),
-            pemasukan: 0,
-            pengeluaran: 0,
-            keuntunganBersih: 0,
-        }));
-        for (const t of transactions) {
-            const dt = new Date(t.createdAt);
-            const b = buckets[dt.getMonth()];
-            if (!b) continue;
-            if (isIncome(t)) add(b, 'pemasukan', t.amount);
-            if (isExpense(t)) add(b, 'pengeluaran', t.amount);
-            add(b, 'keuntunganBersih', getProfitDelta(t));
-        }
-        return buckets;
+        const buckets = Array.from({ length: 12 }, (_, idx) =>
+            emptyBucket(String(idx), formatIdMonth(new Date(start.getFullYear(), idx, 1)))
+        );
+        return populate(buckets, (t) => buckets[new Date(t.createdAt).getMonth()]);
     }
 
     const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 86400000));
+
     if (days <= 14) {
-        const buckets = Array.from({ length: days + 1 }, (_, i) => {
-            const d = new Date(start);
-            d.setDate(start.getDate() + i);
-            return {
-                key: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`,
-                label: formatIdShortDate(d),
-                pemasukan: 0,
-                pengeluaran: 0,
-                keuntunganBersih: 0,
-            };
-        });
-        const bucketByKey = new Map(buckets.map((b) => [b.key, b]));
-        for (const t of transactions) {
-            const dt = new Date(t.createdAt);
-            const key = `${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`;
-            const b = bucketByKey.get(key);
-            if (!b) continue;
-            if (isIncome(t)) add(b, 'pemasukan', t.amount);
-            if (isExpense(t)) add(b, 'pengeluaran', t.amount);
-            add(b, 'keuntunganBersih', getProfitDelta(t));
-        }
-        return buckets;
+        const buckets = makeDayBuckets(days + 1, (d) => formatIdShortDate(d));
+        return populate(buckets, keyByDay(buckets));
     }
 
     if (days <= 120) {
@@ -124,51 +76,29 @@ function buildTrend({ period, start, end, transactions }) {
         const buckets = Array.from({ length: weekCount }, (_, idx) => {
             const ws = new Date(start);
             ws.setDate(start.getDate() + idx * 7);
-            return {
-                key: String(idx + 1),
-                label: formatIdShortDate(ws),
-                pemasukan: 0,
-                pengeluaran: 0,
-                keuntunganBersih: 0,
-            };
+            return emptyBucket(String(idx + 1), formatIdShortDate(ws));
         });
-        for (const t of transactions) {
-            const dt = new Date(t.createdAt);
-            const offsetDays = Math.floor((dt.getTime() - start.getTime()) / 86400000);
-            const weekIndex = Math.floor(offsetDays / 7);
-            const b = buckets[weekIndex];
-            if (!b) continue;
-            if (isIncome(t)) add(b, 'pemasukan', t.amount);
-            if (isExpense(t)) add(b, 'pengeluaran', t.amount);
-            add(b, 'keuntunganBersih', getProfitDelta(t));
-        }
-        return buckets;
+        return populate(buckets, (t) => {
+            const offsetDays = Math.floor((new Date(t.createdAt).getTime() - start.getTime()) / 86400000);
+            return buckets[Math.floor(offsetDays / 7)];
+        });
     }
 
     const buckets = [];
     const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
     cursor.setHours(0, 0, 0, 0);
     while (cursor <= end) {
-        buckets.push({
-            key: `${cursor.getFullYear()}-${cursor.getMonth()}`,
-            label: `${formatIdMonth(cursor)} ${cursor.getFullYear()}`,
-            pemasukan: 0,
-            pengeluaran: 0,
-            keuntunganBersih: 0,
-        });
+        buckets.push(emptyBucket(
+            `${cursor.getFullYear()}-${cursor.getMonth()}`,
+            `${formatIdMonth(cursor)} ${cursor.getFullYear()}`
+        ));
         cursor.setMonth(cursor.getMonth() + 1);
     }
     const bucketByKey = new Map(buckets.map((b) => [b.key, b]));
-    for (const t of transactions) {
+    return populate(buckets, (t) => {
         const dt = new Date(t.createdAt);
-        const key = `${dt.getFullYear()}-${dt.getMonth()}`;
-        const b = bucketByKey.get(key);
-        if (!b) continue;
-        if (isIncome(t)) add(b, 'pemasukan', t.amount);
-        if (isExpense(t)) add(b, 'pengeluaran', t.amount);
-        add(b, 'keuntunganBersih', getProfitDelta(t));
-    }
-    return buckets;
+        return bucketByKey.get(`${dt.getFullYear()}-${dt.getMonth()}`);
+    });
 }
 
 function safeParseJson(value) {
@@ -199,10 +129,7 @@ function computeCogsFromCart(cart, productCostById) {
 }
 
 function buildExpenseBreakdown(transactions) {
-    const expenses = transactions.filter((t) => {
-        const ty = String(t.type || '').toLowerCase().trim();
-        return (ty === 'keluar' || ty === 'pengeluaran' || ty === 'expense');
-    });
+    const expenses = transactions.filter((t) => isExpense(t));
     if (expenses.length === 0) return [];
 
     const sums = new Map();

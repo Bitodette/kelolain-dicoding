@@ -5,7 +5,7 @@ import { API_BASE } from '../utils/api';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 export default function Login({ onLogin }) {
-  const [username, setUsername] = useState('');
+  const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
@@ -20,7 +20,7 @@ export default function Login({ onLogin }) {
 
     try {
       const response = await axios.post(`${API_BASE}/api/auth/login`, {
-        username,
+        name,
         password,
         rememberMe,
       });
@@ -29,7 +29,7 @@ export default function Login({ onLogin }) {
       if (onLogin) onLogin(authData);
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      const message = err.response?.data?.error || 'Login gagal. Cek kembali username dan password.';
+      const message = err.response?.data?.error || 'Login gagal. Cek kembali nama dan password.';
       setError(message);
     } finally {
       setIsSubmitting(false);
@@ -51,12 +51,12 @@ export default function Login({ onLogin }) {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <label className="block">
-            <span className="text-sm font-medium text-[#4B5563]">Username</span>
+            <span className="text-sm font-medium text-[#4B5563]">Nama</span>
             <input
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
               className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-[#111827] outline-none transition-shadow focus:border-[#2936C4] focus:shadow-sm"
-              placeholder="username"
+              placeholder="Nama Anda"
               autoComplete="username"
               spellCheck="false"
             />

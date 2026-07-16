@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const prisma = require('../config/db');
 const { asyncHandler } = require('../middlewares/errorHandler');
-const { getCachedUser, fetchAndCacheUser, invalidateUser, invalidateOrgUsers } = require('../utils/userCache');
+const { invalidateUser, invalidateOrgUsers } = require('../utils/userCache');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -34,7 +34,6 @@ const buildUserResponse = (user) => {
 
   return {
     id: user.id,
-    username: user.username,
     name: user.name || user.username,
     active: user.active,
     roles,
@@ -57,23 +56,22 @@ const ensureDefaultUserRole = async (organizationId) => {
 };
 
 exports.register = async (req, res) => {
-  const { username, password, name } = req.body || {};
+  const { name, password } = req.body || {};
 
-  const trimmedUsername = String(username || '').trim();
-  const trimmedName = String(name || trimmedUsername).trim();
+  const trimmedName = String(name || '').trim();
 
-  if (!trimmedUsername || !password) {
-    return res.status(400).json({ error: 'Username dan password wajib diisi' });
+  if (!trimmedName || !password) {
+    return res.status(400).json({ error: 'Nama dan password wajib diisi' });
   }
 
-  const existingUser = await prisma.user.findUnique({ where: { username: trimmedUsername } });
+  const existingUser = await prisma.user.findFirst({ where: { username: trimmedName } });
   if (existingUser) {
-    return res.status(400).json({ error: 'Username sudah digunakan' });
+    return res.status(400).json({ error: 'Nama sudah digunakan' });
   }
 
   const organization = await prisma.organization.create({
     data: {
-      name: `${trimmedUsername}-store`,
+      name: `${trimmedName}-store`,
     },
   });
 
@@ -83,7 +81,7 @@ exports.register = async (req, res) => {
 
   const user = await prisma.user.create({
     data: {
-      username: trimmedUsername,
+      username: trimmedName,
       password: hashedPassword,
       name: trimmedName,
       active: true,
@@ -103,19 +101,19 @@ exports.register = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-  const { username, password, rememberMe } = req.body || {};
+  const { name, password, rememberMe } = req.body || {};
 
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username dan password wajib diisi' });
+  if (!name || !password) {
+    return res.status(400).json({ error: 'Nama dan password wajib diisi' });
   }
 
-  let user = await prisma.user.findUnique({
-    where: { username },
+  let user = await prisma.user.findFirst({
+    where: { username: name },
     include: { roles: { include: { role: true } }, organization: true },
   });
 
   if (!user) {
-    return res.status(401).json({ error: 'Username atau password salah' });
+    return res.status(401).json({ error: 'Nama atau password salah' });
   }
 
   if (!user.active) {
@@ -124,7 +122,7 @@ exports.login = async (req, res) => {
 
   const passwordMatches = await bcrypt.compare(password, user.password);
   if (!passwordMatches) {
-    return res.status(401).json({ error: 'Username atau password salah' });
+    return res.status(401).json({ error: 'Nama atau password salah' });
   }
 
   const expiresIn = rememberMe ? JWT_REMEMBER_EXPIRES_IN : JWT_EXPIRES_IN;
@@ -136,30 +134,7 @@ exports.login = async (req, res) => {
 };
 
 exports.me = async (req, res) => {
-    const authHeader = req.headers.authorization || '';
-    const token = authHeader.replace(/^Bearer\s+/i, '');
-
-    if (!token) {
-        return res.status(401).json({ error: 'Token tidak ditemukan' });
-    }
-
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        const userId = Number(decoded.sub);
-
-        let user = await getCachedUser(userId);
-        if (!user) {
-            user = await fetchAndCacheUser(userId);
-        }
-
-        if (!user || !user.active) {
-            return res.status(401).json({ error: 'Token tidak valid atau pengguna tidak aktif' });
-        }
-
-        return res.json({ user: buildUserResponse(user) });
-    } catch (error) {
-        return res.status(401).json({ error: 'Token tidak valid' });
-    }
+    return res.json({ user: buildUserResponse(req.user) });
 };
 
 exports.updateProfile = asyncHandler(async (req, res) => {

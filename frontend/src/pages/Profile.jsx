@@ -65,9 +65,8 @@ export default function Profile() {
                     </div>
                     <div>
                         <h2 className="text-xl font-bold text-[#23262F]">{auth?.user?.name || "User"}</h2>
-                        <p className="text-[#6B7280] text-sm">@{auth?.user?.username}</p>
                         <p className="text-xs font-semibold text-[#2936C4] bg-[#EEF2FF] inline-block px-2.5 py-1 rounded-md mt-2">
-                            {auth?.user?.organizationName || "Bisnis"}
+                            {(auth?.user?.roles || []).join(', ') || 'Tidak ada role'}
                         </p>
                     </div>
                 </div>

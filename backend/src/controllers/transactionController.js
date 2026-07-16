@@ -2,12 +2,8 @@ const prisma = require('../config/db');
 const { asyncHandler } = require('../middlewares/errorHandler');
 const { parseLocalDateOnly, startOfDay, endOfDay } = require('../utils/dateHelper');
 const { getCartFromItems, computeCogsFromCart } = require('../utils/financeHelper');
-
-const getStatusFromStock = (stock) => {
-    if (stock <= 0) return 'Habis';
-    if (stock <= 5) return 'Menipis';
-    return 'Aman';
-};
+const { normalizeTypeWrite } = require('../utils/txType');
+const { getStatusFromStock } = require('../utils/stockHelper');
 
 // fifo: ambil batch paling lama dulu buat hitung hpp
 async function computeFifoCogsAndUpdateBatches(cart, orgId) {
@@ -75,12 +71,14 @@ async function computeFifoCogsAndUpdateBatches(cart, orgId) {
     }
 
     await prisma.$transaction(async (tx) => {
-        for (const update of batchUpdates) {
-            await tx.productBatch.update({
-                where: { id: update.id },
-                data: { currentQty: update.currentQty },
-            });
-        }
+        await Promise.all(
+            batchUpdates.map((update) =>
+                tx.productBatch.update({
+                    where: { id: update.id },
+                    data: { currentQty: update.currentQty },
+                })
+            )
+        );
 
         const productIdsToUpdate = Array.from(soldByProduct.entries());
         if (productIdsToUpdate.length > 0) {
@@ -88,21 +86,23 @@ async function computeFifoCogsAndUpdateBatches(cart, orgId) {
                 where: { id: { in: productIdsToUpdate.map(([id]) => id) }, organizationId: orgId },
                 select: { id: true, stock: true },
             });
-            for (const product of products) {
-                const soldQty = soldByProduct.get(product.id) || 0;
-                const newStock = Math.max(0, Number(product.stock || 0) - soldQty);
-                await tx.product.update({
-                    where: { id: product.id },
-                    data: { stock: newStock, status: getStatusFromStock(newStock) },
-                });
-            }
+            await Promise.all(
+                products.map((product) => {
+                    const soldQty = soldByProduct.get(product.id) || 0;
+                    const newStock = Math.max(0, Number(product.stock || 0) - soldQty);
+                    return tx.product.update({
+                        where: { id: product.id },
+                        data: { stock: newStock, status: getStatusFromStock(newStock) },
+                    });
+                })
+            );
         }
     });
 
     return cogs;
 }
 
-async function reverseFifoCogsAndUpdateBatches(cart, orgId) {
+async function reverseFifoCogsAndUpdateBatches(cart, orgId, tx) {
     const normalizedCart = cart
         .map((line) => ({
             productId: Number(line?.productId),
@@ -113,79 +113,117 @@ async function reverseFifoCogsAndUpdateBatches(cart, orgId) {
 
     if (normalizedCart.length === 0) return;
 
-    await prisma.$transaction(async (tx) => {
+    const run = async (t) => {
+        await t.productBatch.createMany({
+            data: normalizedCart.map((line) => ({
+                productId: line.productId,
+                costPrice: line.costPrice,
+                initialQty: line.qty,
+                currentQty: line.qty,
+            })),
+        });
+
+        const productIds = normalizedCart.map((line) => line.productId);
+        const products = await t.product.findMany({
+            where: { id: { in: productIds } },
+            select: { id: true, stock: true },
+        });
+
+        const stockMap = new Map(products.map((p) => [p.id, Number(p.stock || 0)]));
         for (const line of normalizedCart) {
-            await tx.productBatch.create({
-                data: {
-                    productId: line.productId,
-                    costPrice: line.costPrice,
-                    initialQty: line.qty,
-                    currentQty: line.qty,
-                }
-            });
-
-            const product = await tx.product.findUnique({
-                where: { id: line.productId },
-                select: { id: true, stock: true },
-            });
-
-            if (product) {
-                const newStock = Number(product.stock || 0) + line.qty;
-                await tx.product.update({
-                    where: { id: line.productId },
-                    data: { stock: newStock, status: getStatusFromStock(newStock) },
-                });
-            }
+            const cur = stockMap.get(line.productId) || 0;
+            stockMap.set(line.productId, cur + line.qty);
         }
-    });
+
+        await Promise.all(
+            Array.from(stockMap.entries()).map(([id, stock]) =>
+                t.product.update({
+                    where: { id },
+                    data: { stock, status: getStatusFromStock(stock) },
+                })
+            )
+        );
+    };
+
+    if (tx) {
+        await run(tx);
+    } else {
+        await prisma.$transaction(run);
+    }
 }
 
-async function reverseRestockItems(items, orgId) {
+async function reverseRestockItems(items, orgId, tx) {
     const products = items?.products;
     if (!Array.isArray(products) || products.length === 0) return;
 
-    await prisma.$transaction(async (tx) => {
+    const run = async (t) => {
+        const productIds = products
+            .filter((item) => Number.isFinite(Number(item?.productId)) && (Number(item?.qty) || 0) > 0)
+            .map((item) => Number(item.productId));
+
+        const [dbProducts, allBatches] = await Promise.all([
+            t.product.findMany({
+                where: { id: { in: productIds } },
+                select: { id: true, stock: true },
+            }),
+            productIds.length > 0
+                ? t.productBatch.findMany({
+                    where: { productId: { in: productIds }, currentQty: { gte: 0 } },
+                    orderBy: { createdAt: 'desc' },
+                })
+                : [],
+        ]);
+
+        const stockMap = new Map(dbProducts.map((p) => [p.id, Number(p.stock || 0)]));
+        const batchesByProduct = new Map();
+        for (const batch of allBatches) {
+            if (!batchesByProduct.has(batch.productId)) batchesByProduct.set(batch.productId, []);
+            batchesByProduct.get(batch.productId).push(batch);
+        }
+
+        const batchUpdates = [];
         for (const item of products) {
             const productId = Number(item?.productId);
             const qty = Number(item?.qty) || 0;
             if (!Number.isFinite(productId) || qty <= 0) continue;
 
-            const batch = await tx.productBatch.findFirst({
-                where: { productId, initialQty: qty, currentQty: { gte: 0 } },
-                orderBy: { createdAt: 'desc' },
-            });
-
+            const productBatches = batchesByProduct.get(productId) || [];
+            const batch = productBatches.find((b) => Number(b.initialQty) === qty);
             const reduceQty = batch ? Math.min(qty, Number(batch.currentQty)) : qty;
 
             if (batch && reduceQty > 0) {
-                await tx.productBatch.update({
-                    where: { id: batch.id },
-                    data: { currentQty: Number(batch.currentQty) - reduceQty },
+                batchUpdates.push({
+                    id: batch.id,
+                    currentQty: Number(batch.currentQty) - reduceQty,
                 });
             }
 
-            const product = await tx.product.findUnique({
-                where: { id: productId },
-                select: { id: true, stock: true },
-            });
-
-            if (product) {
-                const newStock = Math.max(0, Number(product.stock || 0) - reduceQty);
-                await tx.product.update({
-                    where: { id: productId },
-                    data: { stock: newStock, status: getStatusFromStock(newStock) },
-                });
-            }
+            const cur = stockMap.get(productId) || 0;
+            stockMap.set(productId, Math.max(0, cur - reduceQty));
         }
-    });
-}
 
-const normalizeTypeWrite = (value) => {
-    const ty = String(value || '').toLowerCase().trim();
-    if (['pemasukan', 'income', 'masuk'].includes(ty)) return 'Masuk';
-    if (['pengeluaran', 'expense', 'keluar'].includes(ty)) return 'Keluar';
-    return value;
-};
+        await Promise.all([
+            ...batchUpdates.map((u) =>
+                t.productBatch.update({
+                    where: { id: u.id },
+                    data: { currentQty: u.currentQty },
+                })
+            ),
+            ...Array.from(stockMap.entries()).map(([id, stock]) =>
+                t.product.update({
+                    where: { id },
+                    data: { stock, status: getStatusFromStock(stock) },
+                })
+            ),
+        ]);
+    };
+
+    if (tx) {
+        await run(tx);
+    } else {
+        await prisma.$transaction(run);
+    }
+}
 
 exports.getTransactions = asyncHandler(async (req, res) => {
     const { start, end, limit } = req.query;
@@ -198,7 +236,7 @@ exports.getTransactions = asyncHandler(async (req, res) => {
         if (startDate) where.createdAt.gte = startOfDay(startDate);
         if (endDate) where.createdAt.lte = endOfDay(endDate);
     }
-    const take = limit ? Math.min(200, Math.max(1, Number(limit))) : undefined;
+    const take = limit ? Math.min(200, Math.max(1, Number(limit))) : 50;
 
     if (page) {
         const pageLimit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
@@ -318,74 +356,10 @@ exports.deleteTransaction = asyncHandler(async (req, res) => {
         if (tx.type === 'Masuk') {
             const cart = getCartFromItems(tx.items);
             if (cart.length > 0) {
-                const normalizedCart = cart
-                    .map((line) => ({
-                        productId: Number(line?.productId),
-                        qty: Number(line?.qty) || 0,
-                        costPrice: Number(line?.costPrice) || 0,
-                    }))
-                    .filter((line) => Number.isFinite(line.productId) && line.qty > 0);
-
-                for (const line of normalizedCart) {
-                    await txn.productBatch.create({
-                        data: {
-                            productId: line.productId,
-                            costPrice: line.costPrice,
-                            initialQty: line.qty,
-                            currentQty: line.qty,
-                        }
-                    });
-
-                    const product = await txn.product.findUnique({
-                        where: { id: line.productId },
-                        select: { id: true, stock: true },
-                    });
-
-                    if (product) {
-                        const newStock = Number(product.stock || 0) + line.qty;
-                        await txn.product.update({
-                            where: { id: line.productId },
-                            data: { stock: newStock, status: getStatusFromStock(newStock) },
-                        });
-                    }
-                }
+                await reverseFifoCogsAndUpdateBatches(cart, req.user.organizationId, txn);
             }
         } else if (tx.type === 'Keluar' && tx.category === 'Restock Barang') {
-            const restockProducts = tx.items?.products;
-            if (Array.isArray(restockProducts) && restockProducts.length > 0) {
-                for (const item of restockProducts) {
-                    const productId = Number(item?.productId);
-                    const qty = Number(item?.qty) || 0;
-                    if (!Number.isFinite(productId) || qty <= 0) continue;
-
-                    const batch = await txn.productBatch.findFirst({
-                        where: { productId, initialQty: qty, currentQty: { gte: 0 } },
-                        orderBy: { createdAt: 'desc' },
-                    });
-
-                    const reduceQty = batch ? Math.min(qty, Number(batch.currentQty)) : qty;
-
-                    if (batch && reduceQty > 0) {
-                        await txn.productBatch.update({
-                            where: { id: batch.id },
-                            data: { currentQty: Number(batch.currentQty) - reduceQty },
-                        });
-                    }
-
-                    const product = await txn.product.findUnique({
-                        where: { id: productId },
-                        select: { id: true, stock: true },
-                    });
-
-                    if (product) {
-                        const newStock = Math.max(0, Number(product.stock || 0) - reduceQty);
-                        await txn.product.update({
-                            where: { id: productId },
-                            data: { stock: newStock, status: getStatusFromStock(newStock) },
-                        });
-                    }
-                }
-            }
+            await reverseRestockItems(tx.items, req.user.organizationId, txn);
         }
 
         await txn.transactions.deleteMany({ where: { id, organizationId: req.user.organizationId } });

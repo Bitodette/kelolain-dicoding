@@ -11,23 +11,12 @@ import {
 } from "@heroicons/react/24/outline";
 
 import { API_BASE } from '../utils/api';
+import { normalizeTypeForm, isIncomeType } from '../utils/txType';
 import Pagination from "../components/Pagination";
 
 export default function RiwayatTransaksi() {
     const { addToast } = useToast();
     const { confirm } = useConfirm();
-    const isIncomeType = (type) => {
-        const t = String(type || "").toLowerCase().trim();
-        return t === "masuk" || t === "pemasukan" || t === "income";
-    };
-
-    const normalizeTypeForm = (type) => {
-        const t = String(type || "").toLowerCase().trim();
-        if (t === "pemasukan" || t === "masuk" || t === "income") return "Masuk";
-        if (t === "pengeluaran" || t === "keluar" || t === "expense") return "Keluar";
-        return type;
-    };
-
     const toDatetimeLocal = (value) => {
         if (!value) return "";
         const d = new Date(value);

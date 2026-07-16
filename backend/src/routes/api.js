@@ -30,7 +30,7 @@ const authLimiter = rateLimit({
 // ROUTES AUTH
 router.post('/auth/login', authLimiter, authController.login);
 router.post('/auth/register', authLimiter, authController.register);
-router.get('/auth/me', authController.me);
+router.get('/auth/me', authenticate, authController.me);
 router.put('/auth/profile', authenticate, authController.updateProfile);
 
 // ROUTES PRODUK (butuh akses halaman 'produk')

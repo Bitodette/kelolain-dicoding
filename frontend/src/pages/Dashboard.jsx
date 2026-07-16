@@ -18,6 +18,7 @@ import {
 } from "recharts";
 
 import { API_BASE } from '../utils/api';
+import { getStoredAuth } from '../utils/auth';
 import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function Dashboard() {
@@ -29,8 +30,6 @@ export default function Dashboard() {
 
     const [lowStockItems, setLowStockItems] = useState([]);
     const [isStockLoading, setIsStockLoading] = useState(true);
-    const [userName, setUserName] = useState('Faried');
-    const [userOrg, setUserOrg] = useState('');
 
     useEffect(() => {
         const fetchDashboard = async () => {
@@ -66,14 +65,6 @@ export default function Dashboard() {
         fetchDashboard();
     }, []);
 
-    useEffect(() => {
-        try {
-            const stored = JSON.parse(window.localStorage.getItem('kelolain_auth') || 'null');
-            setUserName(stored?.user?.name || stored?.user?.username || 'Faried');
-            setUserOrg(stored?.user?.organizationName || '');
-        } catch { /* ignore */ }
-    }, []);
-
     // salam berdasarkan jam
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -84,8 +75,14 @@ export default function Dashboard() {
     };
 
     const getCondition = () => {
-        return "baik";
+        if (totals.keuntunganBersih > 0) return "baik";
+        if (totals.keuntunganBersih < 0) return "kurang menguntungkan";
+        if (transactionCount === 0) return "sepi";
+        return "stabil";
     };
+
+    const storedAuth = getStoredAuth();
+    const userName = storedAuth?.user?.name || storedAuth?.user?.username;
 
     const totalOmzet = totals.pemasukan || 0;
     const totalUntung = totals.keuntunganBersih || 0;

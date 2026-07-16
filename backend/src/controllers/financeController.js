@@ -2,6 +2,9 @@ const prisma = require('../config/db');
 const { asyncHandler } = require('../middlewares/errorHandler');
 const { getWeekRange, getMonthRange, getYearRange, parseLocalDateOnly, startOfDay, endOfDay } = require('../utils/dateHelper');
 const { buildTrend, buildExpenseBreakdown } = require('../utils/financeHelper');
+const { isIncome, isExpense, normalizeType } = require('../utils/txType');
+const INCOME_VARIANTS = ['masuk', 'pemasukan', 'income'];
+const EXPENSE_VARIANTS = ['keluar', 'pengeluaran', 'expense'];
 
 async function getAvailability(prismaClient, organizationId) {
     const now = new Date();
@@ -57,24 +60,17 @@ exports.getFinanceOverview = asyncHandler(async (req, res) => {
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
 
-    const normalizeType = (value) => String(value || '').toLowerCase().trim();
-    const isExpenseCat = (t) => {
-        const ty = normalizeType(t.type);
-        return ty === 'keluar' || ty === 'pengeluaran' || ty === 'expense';
-    };
-
     let pemasukan = 0;
     let pengeluaran = 0;
     let keuntunganBersih = 0;
     for (const t of tx) {
         const amt = Number(t.amount) || 0;
-        const ty = normalizeType(t.type);
 
-        if (ty === 'masuk' || ty === 'pemasukan' || ty === 'income') {
+        if (isIncome(t)) {
             pemasukan += amt;
             keuntunganBersih += amt;
         }
-        if (isExpenseCat(t)) {
+        if (isExpense(t)) {
             pengeluaran += amt;
             keuntunganBersih -= amt;
         }
@@ -85,18 +81,15 @@ exports.getFinanceOverview = asyncHandler(async (req, res) => {
 
     const last7Start = new Date(now);
     last7Start.setDate(now.getDate() - 6);
-    const last7 = await prisma.transactions.findMany({
-        where: { organizationId: req.user.organizationId, createdAt: { gte: startOfDay(last7Start), lte: endOfDay(now) } },
-        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    const last7 = tx.filter((t) => {
+        const d = new Date(t.createdAt);
+        return d >= startOfDay(last7Start) && d <= endOfDay(now);
     });
     let net7 = 0;
     for (const t of last7) {
         const amt = Number(t.amount) || 0;
-        const ty = String(t.type || '').toLowerCase().trim();
-        if (ty === 'masuk' || ty === 'pemasukan' || ty === 'income') net7 += amt;
-        if (ty === 'keluar' || ty === 'pengeluaran' || ty === 'expense') {
-            net7 -= amt;
-        }
+        if (isIncome(t)) net7 += amt;
+        if (isExpense(t)) net7 -= amt;
     }
     const projection7d = last7.length >= 2 ? Math.round(net7) : null;
 
@@ -129,23 +122,20 @@ exports.getFinanceOverview = asyncHandler(async (req, res) => {
 
     let comparison = null;
     if (prevRange) {
-        const prevTx = await prisma.transactions.findMany({
+        const prevAggregates = await prisma.transactions.groupBy({
+            by: ['type'],
             where: { organizationId: req.user.organizationId, createdAt: { gte: prevRange.start, lte: prevRange.end } },
+            _sum: { amount: true },
         });
 
-        let prevPemasukan = 0, prevPengeluaran = 0, prevKeuntunganBersih = 0;
-        for (const t of prevTx) {
-            const amt = Number(t.amount) || 0;
-            const ty = String(t.type || '').toLowerCase().trim();
-            if (ty === 'masuk' || ty === 'pemasukan' || ty === 'income') {
-                prevPemasukan += amt;
-                prevKeuntunganBersih += amt;
-            }
-            if (ty === 'keluar' || ty === 'pengeluaran' || ty === 'expense') {
-                prevPengeluaran += amt;
-                prevKeuntunganBersih -= amt;
-            }
+        let prevPemasukan = 0, prevPengeluaran = 0;
+        for (const agg of prevAggregates) {
+            const amt = Number(agg._sum.amount) || 0;
+            const ty = normalizeType(agg.type);
+            if (INCOME_VARIANTS.includes(ty)) prevPemasukan += amt;
+            if (EXPENSE_VARIANTS.includes(ty)) prevPengeluaran += amt;
         }
+        const prevKeuntunganBersih = prevPemasukan - prevPengeluaran;
 
         comparison = {
             pemasukan: computeChange(pemasukan, prevPemasukan),

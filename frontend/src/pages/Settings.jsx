@@ -58,7 +58,7 @@ export default function Settings() {
   const [error, setError] = useState(null);
   const [newRoleName, setNewRoleName] = useState('');
   const [newRolePages, setNewRolePages] = useState([]);
-  const [newUser, setNewUser] = useState({ username: '', password: '', name: '', roleIds: [], active: true });
+  const [newUser, setNewUser] = useState({ name: '', password: '', roleIds: [] });
   const [editingUser, setEditingUser] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [currentUserRoleNames, setCurrentUserRoleNames] = useState([]);
@@ -84,7 +84,7 @@ export default function Settings() {
   useEffect(() => {
     const stored = getStoredAuth();
     setCurrentUserId(stored?.user?.id ?? null);
-    setCurrentUserRoleNames(stored?.user?.roles?.map((role) => role.name) || []);
+    setCurrentUserRoleNames(stored?.user?.roles || []);
     fetchData();
   }, []);
 
@@ -120,7 +120,7 @@ export default function Settings() {
   };
 
   const resetUserForm = () => {
-    setNewUser({ username: '', password: '', name: '', roleIds: [], active: true });
+    setNewUser({ name: '', password: '', roleIds: [] });
     setEditingUser(null);
   };
 
@@ -140,37 +140,31 @@ export default function Settings() {
   const handleEditUser = (user) => {
     setEditingUser(user);
     setNewUser({
-      username: user.username || '',
-      password: '',
       name: user.name || '',
+      password: '',
       roleIds: user.roles.map((r) => r.id),
-      active: user.active,
     });
   };
 
   const handleSaveUser = async () => {
-    if (!newUser.username.trim()) return addToast('Username wajib diisi', 'warning');
+    if (!newUser.name.trim()) return addToast('Nama wajib diisi', 'warning');
     if (!editingUser && !newUser.password.trim()) return addToast('Password wajib diisi', 'warning');
     if (newUser.roleIds.length === 0) return addToast('Pengguna harus memiliki minimal 1 role', 'warning');
 
     try {
       if (editingUser) {
         const payload = {
-          username: newUser.username.trim(),
-          name: newUser.name.trim() || newUser.username.trim(),
+          name: newUser.name.trim(),
           roleIds: newUser.roleIds,
-          active: newUser.active,
         };
         if (newUser.password.trim()) payload.password = newUser.password.trim();
         await axios.put(`${API_BASE}/api/users/${editingUser.id}`, payload);
         addToast('Pengguna berhasil diperbarui', 'success');
       } else {
         await axios.post(`${API_BASE}/api/users`, {
-          username: newUser.username.trim(),
+          name: newUser.name.trim(),
           password: newUser.password,
-          name: newUser.name.trim() || newUser.username.trim(),
           roleIds: newUser.roleIds,
-          active: newUser.active,
         });
         addToast('Pengguna berhasil ditambahkan', 'success');
       }
@@ -181,8 +175,8 @@ export default function Settings() {
     }
   };
 
-  const handleDeleteUser = async (id, username) => {
-    const confirmed = await confirm(`Hapus pengguna "${username}"?`, 'Hapus Pengguna');
+  const handleDeleteUser = async (id, name) => {
+    const confirmed = await confirm(`Hapus pengguna "${name}"?`, 'Hapus Pengguna');
     if (!confirmed) return;
     try {
       await axios.delete(`${API_BASE}/api/users/${id}`);
@@ -252,13 +246,14 @@ export default function Settings() {
                       <p className="font-bold text-sm text-[#23262F]">{role.name}</p>
                       <p className="text-xs text-[#6B7280]">{role.pages.join(', ') || 'Tidak ada akses'}</p>
                     </div>
-                    <button
-                      onClick={() => handleDeleteRole(role.id)}
-                      disabled={isCurrentUserRole}
-                      className={`text-xs font-bold shrink-0 flex items-center gap-1 ${isCurrentUserRole ? 'text-[#6B7280] cursor-not-allowed' : 'text-[#E02D3C] hover:underline'}`}
-                    >
-                      {isCurrentUserRole ? 'Role sendiri' : <><TrashIcon className="w-3.5 h-3.5" /> Hapus</>}
-                    </button>
+                    {!isCurrentUserRole && (
+                      <button
+                        onClick={() => handleDeleteRole(role.id)}
+                        className="text-xs font-bold shrink-0 flex items-center gap-1 text-[#E02D3C] hover:underline"
+                      >
+                        <TrashIcon className="w-3.5 h-3.5" /> Hapus
+                      </button>
+                    )}
                   </div>
                 );
               })
@@ -274,12 +269,12 @@ export default function Settings() {
         onToggle={() => setOpenSection(openSection === 'users' ? null : 'users')}
       >
         <div className="space-y-5">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex flex-col sm:flex-row gap-3">
             <input
-              value={newUser.username}
-              onChange={(e) => handleNewUserChange('username', e.target.value)}
-              placeholder="Username"
-              className="rounded-xl border border-[#E6E8EC] px-4 py-2.5 text-sm focus:border-[#2936C4] focus:outline-none"
+              value={newUser.name}
+              onChange={(e) => handleNewUserChange('name', e.target.value)}
+              placeholder="Nama pengguna"
+              className="flex-1 rounded-xl border border-[#E6E8EC] px-4 py-2.5 text-sm focus:border-[#2936C4] focus:outline-none"
             />
             <input
               type="password"
@@ -288,21 +283,6 @@ export default function Settings() {
               placeholder={editingUser ? 'Kosongkan jika tidak diganti' : 'Password'}
               className="rounded-xl border border-[#E6E8EC] px-4 py-2.5 text-sm focus:border-[#2936C4] focus:outline-none"
             />
-            <input
-              value={newUser.name}
-              onChange={(e) => handleNewUserChange('name', e.target.value)}
-              placeholder="Nama pengguna (opsional)"
-              className="rounded-xl border border-[#E6E8EC] px-4 py-2.5 text-sm focus:border-[#2936C4] focus:outline-none"
-            />
-            <label className="inline-flex items-center gap-2.5 rounded-xl border border-[#E6E8EC] px-4 py-2.5 text-sm cursor-pointer hover:border-[#2936C4] transition-colors">
-              <input
-                type="checkbox"
-                checked={newUser.active}
-                onChange={(e) => handleNewUserChange('active', e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-[#2936C4] focus:ring-[#2936C4]"
-              />
-              Akun aktif
-            </label>
           </div>
 
           <div>
@@ -352,21 +332,16 @@ export default function Settings() {
             {users.length === 0 ? (
               <p className="text-sm text-[#6B7280] py-2">Belum ada pengguna.</p>
             ) : (
-              users.map((user) => (
+              users.map((user) => {
+                const userRoleNames = user.roles.map((r) => r.name);
+                const hasSharedRole = userRoleNames.some((name) => currentUserRoleNames.includes(name));
+                return (
                 <div
                   key={user.id}
-                  className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
-                    user.active ? 'border-[#E6E8EC]' : 'border-red-200 bg-red-50'
-                  }`}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-[#E6E8EC] px-4 py-3"
                 >
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-bold text-sm text-[#23262F]">{user.username}</p>
-                      {!user.active && (
-                        <span className="text-[10px] font-bold text-[#E02D3C] bg-red-100 px-1.5 py-0.5 rounded">Nonaktif</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-[#6B7280]">{user.name}</p>
+                    <p className="font-bold text-sm text-[#23262F]">{user.name || user.username}</p>
                     <p className="text-xs text-[#8B95A7]">{user.roles.map((role) => role.name).join(', ')}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -377,14 +352,19 @@ export default function Settings() {
                         <button onClick={() => handleEditUser(user)} className="text-xs font-bold text-[#2936C4] hover:underline flex items-center gap-1">
                           <PencilSquareIcon className="w-3.5 h-3.5" /> Edit
                         </button>
-                        <button onClick={() => handleDeleteUser(user.id, user.username)} className="text-xs font-bold text-[#E02D3C] hover:underline flex items-center gap-1">
-                          <TrashIcon className="w-3.5 h-3.5" /> Hapus
+                        <button
+                          onClick={() => handleDeleteUser(user.id, user.name || user.username)}
+                          disabled={hasSharedRole}
+                          className={`text-xs font-bold flex items-center gap-1 ${hasSharedRole ? 'text-[#6B7280] cursor-not-allowed' : 'text-[#E02D3C] hover:underline'}`}
+                        >
+                          {hasSharedRole ? 'Tidak bisa hapus' : <><TrashIcon className="w-3.5 h-3.5" /> Hapus</>}
                         </button>
                       </>
                     )}
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

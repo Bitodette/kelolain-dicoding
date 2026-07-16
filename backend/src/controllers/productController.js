@@ -1,11 +1,7 @@
 const prisma = require('../config/db');
 const { asyncHandler } = require('../middlewares/errorHandler');
-
-const getStatusFromStock = (stock) => {
-    if (stock <= 0) return 'Habis';
-    if (stock <= 5) return 'Menipis';
-    return 'Aman';
-};
+const { getStatusFromStock } = require('../utils/stockHelper');
+const { syncLowStockNotifications } = require('../utils/notificationHelper');
 
 exports.getProducts = asyncHandler(async (req, res) => {
     const orgId = req.user.organizationId;
@@ -21,7 +17,7 @@ exports.getProducts = asyncHandler(async (req, res) => {
         return res.json({ data: products, total, page, totalPages: Math.ceil(total / limit) });
     }
 
-    const products = await prisma.product.findMany({ where: { organizationId: orgId }, orderBy: { id: 'asc' } });
+    const products = await prisma.product.findMany({ where: { organizationId: orgId }, orderBy: { id: 'asc' }, take: 200 });
     res.json(products);
 });
 
@@ -113,30 +109,88 @@ exports.updateProduct = asyncHandler(async (req, res) => {
         if (categoryRecord) categoryName = categoryRecord.name;
     }
 
-    const updateData = {
-        name,
-        category: categoryName,
-        categoryId: selectedCategoryId,
-        costPrice: parsedCost,
-        price: parsedPrice,
-        stock: parsedStock,
-        status: status || getStatusFromStock(parsedStock),
-    };
+    if (stockDelta < 0) {
+        const reduceQty = Math.abs(stockDelta);
+        let remaining = reduceQty;
+        let totalCostConsumed = 0;
 
-    if (stockDelta > 0) {
-        updateData.batches = {
-            create: {
+        const batches = await prisma.productBatch.findMany({
+            where: { productId: id, currentQty: { gt: 0 } },
+            orderBy: { createdAt: 'asc' },
+        });
+
+        const batchUpdates = [];
+        for (const batch of batches) {
+            if (remaining <= 0) break;
+            const take = Math.min(remaining, Number(batch.currentQty));
+            totalCostConsumed += take * Number(batch.costPrice);
+            batchUpdates.push({
+                id: batch.id,
+                currentQty: Number(batch.currentQty) - take,
+            });
+            remaining -= take;
+        }
+
+        await Promise.all(
+            batchUpdates.map((u) =>
+                prisma.productBatch.update({
+                    where: { id: u.id },
+                    data: { currentQty: u.currentQty },
+                })
+            )
+        );
+
+        await prisma.product.update({
+            where: { id },
+            data: {
+                name,
+                category: categoryName,
+                categoryId: selectedCategoryId,
                 costPrice: parsedCost,
-                initialQty: stockDelta,
-                currentQty: stockDelta,
-            }
+                price: parsedPrice,
+                stock: parsedStock,
+                status: status || getStatusFromStock(parsedStock),
+            },
+        });
+
+        await prisma.transactions.create({
+            data: {
+                organizationId: orgId,
+                label: `Koreksi stok ${existingProduct.name}`,
+                type: 'Keluar',
+                category: 'Koreksi Stok',
+                amount: totalCostConsumed,
+                cogs: 0,
+                items: { cart: [{ productId: id, name: existingProduct.name, qty: reduceQty, price: totalCostConsumed > 0 ? Math.round(totalCostConsumed / reduceQty) : parsedCost, costPrice: parsedCost }] },
+            },
+        });
+    } else {
+        const updateData = {
+            name,
+            category: categoryName,
+            categoryId: selectedCategoryId,
+            costPrice: parsedCost,
+            price: parsedPrice,
+            stock: parsedStock,
+            status: status || getStatusFromStock(parsedStock),
         };
+
+        if (stockDelta > 0) {
+            updateData.batches = {
+                create: {
+                    costPrice: parsedCost,
+                    initialQty: stockDelta,
+                    currentQty: stockDelta,
+                }
+            };
+        }
+
+        await prisma.product.update({ where: { id }, data: updateData });
     }
 
-    const product = await prisma.product.update({
-        where: { id },
-        data: updateData,
-    });
+    await syncLowStockNotifications(orgId);
+
+    const product = await prisma.product.findFirst({ where: { id, organizationId: orgId } });
     res.json(product);
 });
 
@@ -187,12 +241,21 @@ exports.restockProduct = asyncHandler(async (req, res) => {
     ]);
 
     const product = await prisma.product.findFirst({ where: { id, organizationId: orgId } });
+    await syncLowStockNotifications(orgId);
     res.json(product);
 });
 
 exports.deleteProduct = asyncHandler(async (req, res) => {
     const id = Number(req.params.id);
-    const deleteResult = await prisma.product.deleteMany({ where: { id, organizationId: req.user.organizationId } });
-    if (deleteResult.count === 0) return res.status(404).json({ error: 'Produk tidak ditemukan' });
+    const orgId = req.user.organizationId;
+    const product = await prisma.product.findFirst({ where: { id, organizationId: orgId } });
+    if (!product) return res.status(404).json({ error: 'Produk tidak ditemukan' });
+
+    await prisma.$transaction([
+        prisma.notification.deleteMany({ where: { productId: id, organizationId: orgId } }),
+        prisma.product.deleteMany({ where: { id, organizationId: orgId } }),
+    ]);
+
+    await syncLowStockNotifications(orgId);
     res.json({ message: 'Produk berhasil dihapus' });
 });

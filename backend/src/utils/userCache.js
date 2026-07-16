@@ -3,6 +3,7 @@ const { Redis } = require('@upstash/redis');
 
 const CACHE_TTL_SEC = 60;
 const KEY_PREFIX = 'kelolain:user:';
+const ORG_SET_PREFIX = 'kelolain:org:';
 
 const redis = new Redis({
     url: process.env.UPSTASH_REDIS_REST_URL,
@@ -26,7 +27,13 @@ async function fetchAndCacheUser(userId) {
 
     if (user) {
         try {
-            await redis.set(KEY_PREFIX + userId, JSON.stringify(user), { ex: CACHE_TTL_SEC });
+            const pipeline = redis.pipeline();
+            pipeline.set(KEY_PREFIX + userId, JSON.stringify(user), { ex: CACHE_TTL_SEC });
+            if (user.organizationId) {
+                pipeline.sadd(ORG_SET_PREFIX + user.organizationId, String(userId));
+                pipeline.expire(ORG_SET_PREFIX + user.organizationId, CACHE_TTL_SEC);
+            }
+            await pipeline.exec();
         } catch { /* Redis down, skip cache, data still correct */ }
     }
 
@@ -38,19 +45,15 @@ function invalidateUser(userId) {
 }
 
 function invalidateOrgUsers(organizationId) {
-    redis.keys(KEY_PREFIX + '*').then((keys) => {
-        if (!keys || !keys.length) return;
-        Promise.all(keys.map((k) => redis.get(k))).then((values) => {
-            const toDelete = keys.filter((_, i) => {
-                try {
-                    const u = typeof values[i] === 'string' ? JSON.parse(values[i]) : values[i];
-                    return u && u.organizationId === organizationId;
-                } catch { return false; }
-            });
-            if (toDelete.length) {
-                Promise.all(toDelete.map((k) => redis.del(k))).catch(() => {});
-            }
-        });
+    const setKey = ORG_SET_PREFIX + organizationId;
+    redis.smembers(setKey).then((userIds) => {
+        if (!userIds || !userIds.length) return;
+        const pipeline = redis.pipeline();
+        for (const uid of userIds) {
+            pipeline.del(KEY_PREFIX + uid);
+        }
+        pipeline.del(setKey);
+        pipeline.exec().catch(() => {});
     }).catch(() => {});
 }
 

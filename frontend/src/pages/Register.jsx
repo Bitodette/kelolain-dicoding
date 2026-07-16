@@ -6,7 +6,6 @@ import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 export default function Register({ onLogin }) {
   const [name, setName] = useState('');
-  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -29,7 +28,6 @@ export default function Register({ onLogin }) {
     try {
       const response = await axios.post(`${API_BASE}/api/auth/register`, {
         name,
-        username,
         password,
       });
 
@@ -66,18 +64,6 @@ export default function Register({ onLogin }) {
               className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-[#111827] outline-none transition-shadow focus:border-[#2936C4] focus:shadow-sm"
               placeholder="Nama Anda"
               autoComplete="name"
-              spellCheck="false"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-sm font-medium text-[#4B5563]">Username</span>
-            <input
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-[#111827] outline-none transition-shadow focus:border-[#2936C4] focus:shadow-sm"
-              placeholder="admin"
-              autoComplete="username"
               spellCheck="false"
             />
           </label>

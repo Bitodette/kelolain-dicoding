@@ -11,28 +11,27 @@ const normalizeRoleIds = (roleIds) => {
 exports.getUsers = asyncHandler(async (req, res) => {
     const users = await prisma.user.findMany({
         where: { organizationId: req.user.organizationId },
-        orderBy: { username: 'asc' },
+        orderBy: { name: 'asc' },
         include: { roles: { include: { role: true } } },
+        take: 200,
     });
     const formatted = users.map((user) => ({
         id: user.id,
-        username: user.username,
         name: user.name,
-        active: user.active,
         roles: user.roles.map((ur) => ({ id: ur.role.id, name: ur.role.name, pages: ur.role.pages })),
     }));
     res.json(formatted);
 });
 
 exports.createUser = asyncHandler(async (req, res) => {
-    const { username, password, name, roleIds, active } = req.body;
-    const trimmedUsername = String(username || '').trim();
-    if (!trimmedUsername || !password) {
-        return res.status(400).json({ error: 'Username dan password wajib diisi' });
+    const { name, password, roleIds } = req.body;
+    const trimmedName = String(name || '').trim();
+    if (!trimmedName || !password) {
+        return res.status(400).json({ error: 'Nama dan password wajib diisi' });
     }
 
-    const existing = await prisma.user.findUnique({ where: { username: trimmedUsername } });
-    if (existing) return res.status(400).json({ error: 'Username sudah digunakan' });
+    const existing = await prisma.user.findFirst({ where: { username: trimmedName } });
+    if (existing) return res.status(400).json({ error: 'Nama sudah digunakan' });
 
     const normalizedRoleIds = normalizeRoleIds(roleIds);
     if (normalizedRoleIds.length === 0) {
@@ -52,10 +51,10 @@ exports.createUser = asyncHandler(async (req, res) => {
 
     const user = await prisma.user.create({
         data: {
-            username: trimmedUsername,
+            username: trimmedName,
             password: hashedPassword,
-            name: String(name || trimmedUsername).trim() || trimmedUsername,
-            active: active !== undefined ? Boolean(active) : true,
+            name: trimmedName,
+            active: true,
             organizationId: orgId,
             roles: {
                 create: normalizedRoleIds.map((roleId) => ({ role: { connect: { id: roleId } } })),
@@ -66,9 +65,7 @@ exports.createUser = asyncHandler(async (req, res) => {
 
     res.status(201).json({
         id: user.id,
-        username: user.username,
         name: user.name,
-        active: user.active,
         roles: user.roles.map((ur) => ({ id: ur.role.id, name: ur.role.name, pages: ur.role.pages })),
     });
 });
@@ -116,9 +113,7 @@ exports.updateUser = asyncHandler(async (req, res) => {
 
     res.json({
         id: user.id,
-        username: user.username,
         name: user.name,
-        active: user.active,
         roles: user.roles.map((ur) => ({ id: ur.role.id, name: ur.role.name, pages: ur.role.pages })),
     });
 });

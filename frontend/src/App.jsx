@@ -1,21 +1,21 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { ToastProvider } from "./components/Toast";
 import { ConfirmProvider } from "./components/ConfirmDialog";
-import Dashboard from "./pages/Dashboard";
-import Keuangan from "./pages/Keuangan";
-import RiwayatTransaksi from "./pages/RiwayatTransaksi";
-import Produk from "./pages/Produk";
-import Kasir from "./pages/Kasir";
-import Insight from "./pages/Insight";
-import Settings from "./pages/Settings";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Landing from "./pages/Landing";
-import Profile from "./pages/Profile";
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Keuangan = lazy(() => import("./pages/Keuangan"));
+const RiwayatTransaksi = lazy(() => import("./pages/RiwayatTransaksi"));
+const Produk = lazy(() => import("./pages/Produk"));
+const Kasir = lazy(() => import("./pages/Kasir"));
+const Insight = lazy(() => import("./pages/Insight"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const Landing = lazy(() => import("./pages/Landing"));
+const Profile = lazy(() => import("./pages/Profile"));
 import { applyAuthHeader, getStoredAuth, setStoredAuth } from "./utils/auth";
 import { API_BASE } from "./utils/api";
 import LoadingSpinner from "./components/LoadingSpinner";
@@ -154,6 +154,7 @@ function App() {
       <main className="w-screen flex-1 bg-white overflow-x-hidden">
         {isAuthenticated && <Navbar activeTab={activeTab} setMobileOpen={setMobileOpen} onLogout={handleLogout} notifications={notifications} onMarkRead={markNotificationRead} onMarkAllRead={markAllNotificationsRead} />}
         <div className={isAuthenticated ? "px-4 sm:px-8 pb-8 mx-auto" : ""}>
+          <Suspense fallback={<LoadingSpinner fullScreen text="Memuat..." />}>
           <Routes>
             <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />} />
             <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Register onLogin={handleLogin} />} />
@@ -228,6 +229,7 @@ function App() {
               element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />}
             />
           </Routes>
+          </Suspense>
         </div>
       </main>
 

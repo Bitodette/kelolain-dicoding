@@ -1,6 +1,7 @@
 const prisma = require('../config/db');
 const { asyncHandler } = require('../middlewares/errorHandler');
 const { getWeekRange, startOfDay, endOfDay } = require('../utils/dateHelper');
+const { isIncome, isExpense } = require('../utils/txType');
 
 const LOW_STOCK_THRESHOLD = 5;
 
@@ -13,6 +14,7 @@ exports.getDashboardSummary = asyncHandler(async (req, res) => {
         prisma.transactions.findMany({
             where: { organizationId: orgId, createdAt: { gte: range.start, lte: range.end } },
             orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+            take: 200,
         }),
         prisma.product.findMany({
             where: { organizationId: orgId, stock: { lte: LOW_STOCK_THRESHOLD } },
@@ -45,16 +47,15 @@ exports.getDashboardSummary = asyncHandler(async (req, res) => {
 
     for (const t of weekTransactions) {
         const amt = Number(t.amount) || 0;
-        const ty = String(t.type || '').toLowerCase().trim();
         const dt = new Date(t.createdAt);
         const key = `${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`;
         const b = bucketByKey.get(key);
 
-        if (ty === 'masuk' || ty === 'pemasukan' || ty === 'income') {
+        if (isIncome(t)) {
             pemasukan += amt;
             if (b) { b.pemasukan += amt; b.keuntunganBersih += amt; }
         }
-        if (ty === 'keluar' || ty === 'pengeluaran' || ty === 'expense') {
+        if (isExpense(t)) {
             pengeluaran += amt;
             if (b) { b.pengeluaran += amt; b.keuntunganBersih -= amt; }
         }
@@ -79,8 +80,12 @@ exports.getDashboardSummary = asyncHandler(async (req, res) => {
                     type: 'Masuk',
                     createdAt: { gte: startOfDay(sevenDaysAgo) },
                 },
+                take: 200,
             }),
-            prisma.product.findMany({ where: { organizationId: orgId } }),
+            prisma.product.findMany({
+                where: { organizationId: orgId },
+                select: { name: true, stock: true },
+            }),
         ]);
 
         const dayTxsMap = new Map();

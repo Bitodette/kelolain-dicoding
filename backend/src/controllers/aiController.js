@@ -1,53 +1,35 @@
-const fs = require('fs').promises;
-const path = require('path');
 const prisma = require('../config/db');
 const axios = require('axios');
 const FormData = require('form-data');
 const sharp = require('sharp');
 const { asyncHandler } = require('../middlewares/errorHandler');
+const { Redis } = require('@upstash/redis');
 
 const AI_BASE_URL = process.env.AI_BASE_URL;
 const RECEIPT_SCANNER_URL = process.env.RECEIPT_SCANNER_URL;
-const CACHE_FILE = path.resolve(__dirname, '..', '..', 'ai-prediction-cache.json');
 const MAX_DAILY_SCANS = 10;
 
-// cache biar ga manggil ai terus tiap request
-const defaultCache = {
-    revenue: { key: null, data: null },
-    demand: { key: null, data: null },
-    bundling: { key: null, data: null },
-};
+const redis = new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
-const loadCacheFromFile = async () => {
+const CACHE_PREFIX = 'kelolain:ai-cache:';
+const CACHE_TTL_SEC = 3600;
+
+async function getCachedPrediction(type) {
     try {
-        const raw = await fs.readFile(CACHE_FILE, 'utf8');
-        const parsed = JSON.parse(raw);
-        return {
-            revenue: parsed.revenue || defaultCache.revenue,
-            demand: parsed.demand || defaultCache.demand,
-            bundling: parsed.bundling || defaultCache.bundling,
-        };
-    } catch (err) {
-        if (err.code !== 'ENOENT') {
-            console.error('Failed to load AI cache file:', err.message);
-        }
-        return { ...defaultCache };
-    }
-};
+        const raw = await redis.get(CACHE_PREFIX + type);
+        if (!raw) return null;
+        return typeof raw === 'string' ? JSON.parse(raw) : raw;
+    } catch { return null; }
+}
 
-const saveCacheToFile = async (cacheData) => {
+async function setCachedPrediction(type, cacheKey, data) {
     try {
-        await fs.writeFile(CACHE_FILE, JSON.stringify(cacheData, null, 2), 'utf8');
-    } catch (err) {
-        console.error('Failed to save AI cache file:', err.message);
-    }
-};
-
-let cache = { ...defaultCache };
-const initCache = async () => {
-    cache = await loadCacheFromFile();
-};
-initCache();
+        await redis.set(CACHE_PREFIX + type, JSON.stringify({ key: cacheKey, data }), { ex: CACHE_TTL_SEC });
+    } catch { /* Redis down, skip cache */ }
+}
 
 const stableStringify = (value) => {
     if (Array.isArray(value)) {
@@ -156,14 +138,13 @@ exports.getRevenuePrediction = asyncHandler(async (req, res) => {
 
     if (revenueData.length < 3) {
         const emptyResponse = { result: [], fallback: true, message: 'Data historis belum cukup untuk prediksi.' };
-        cache.revenue.key = cacheKey;
-        cache.revenue.data = emptyResponse;
-        await saveCacheToFile(cache);
+        await setCachedPrediction('revenue', cacheKey, emptyResponse);
         return res.json(emptyResponse);
     }
 
-    if (cache.revenue.key === cacheKey && cache.revenue.data) {
-        return res.json(cache.revenue.data);
+    const cached = await getCachedPrediction('revenue');
+    if (cached && cached.key === cacheKey) {
+        return res.json(cached.data);
     }
 
     let aiResponse;
@@ -175,9 +156,7 @@ exports.getRevenuePrediction = asyncHandler(async (req, res) => {
         aiResponse = { result: buildRevenueFallback(revenueData), fallback: true };
     }
 
-    cache.revenue.key = cacheKey;
-    cache.revenue.data = aiResponse;
-    await saveCacheToFile(cache);
+    await setCachedPrediction('revenue', cacheKey, aiResponse);
 
     res.json(aiResponse);
 });
@@ -195,7 +174,10 @@ exports.getDemandPrediction = asyncHandler(async (req, res) => {
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(today.getDate() - 6);
 
-    const products = await prisma.product.findMany({ where: { organizationId: req.user.organizationId } });
+    const products = await prisma.product.findMany({
+        where: { organizationId: req.user.organizationId },
+        select: { name: true, stock: true },
+    });
     
     const recentTransactions = await prisma.transactions.findMany({
         where: {
@@ -221,9 +203,7 @@ exports.getDemandPrediction = asyncHandler(async (req, res) => {
         const emptyPayload = { data: null };
         const cacheKey = stableStringify(emptyPayload);
         const emptyResponse = { result: [], fallback: true, message: 'Data historis belum cukup untuk prediksi stok.' };
-        cache.demand.key = cacheKey;
-        cache.demand.data = emptyResponse;
-        await saveCacheToFile(cache);
+        await setCachedPrediction('demand', cacheKey, emptyResponse);
         return res.json(emptyResponse);
     }
 
@@ -255,8 +235,9 @@ exports.getDemandPrediction = asyncHandler(async (req, res) => {
     const payload = { data: demandPayload };
     const cacheKey = stableStringify(payload);
 
-    if (cache.demand.key === cacheKey && cache.demand.data) {
-        return res.json(cache.demand.data);
+    const cached = await getCachedPrediction('demand');
+    if (cached && cached.key === cacheKey) {
+        return res.json(cached.data);
     }
 
     let aiResponse;
@@ -268,9 +249,7 @@ exports.getDemandPrediction = asyncHandler(async (req, res) => {
         aiResponse = { result: buildDemandFallback(demandPayload), fallback: true };
     }
 
-    cache.demand.key = cacheKey;
-    cache.demand.data = aiResponse;
-    await saveCacheToFile(cache);
+    await setCachedPrediction('demand', cacheKey, aiResponse);
 
     res.json(aiResponse);
 });
@@ -316,33 +295,30 @@ exports.getBundlingSuggestion = asyncHandler(async (req, res) => {
 
     if (bundlingData.length < 3) {
         const emptyResponse = { result: [], fallback: true, message: 'Belum cukup transaksi untuk rekomendasi bundling.' };
-        cache.bundling.key = cacheKey;
-        cache.bundling.data = emptyResponse;
-        await saveCacheToFile(cache);
+        await setCachedPrediction('bundling', cacheKey, emptyResponse);
         return res.json(emptyResponse);
     }
 
-    if (cache.bundling.key === cacheKey && cache.bundling.data) {
-        return res.json(cache.bundling.data);
+    const cached = await getCachedPrediction('bundling');
+    if (cached && cached.key === cacheKey) {
+        return res.json(cached.data);
     }
 
     let aiResponse;
 
     try {
         aiResponse = await safeAiRequest(`${AI_BASE_URL}/bundling`, payload);
-
-        cache.bundling.key = cacheKey;
-        cache.bundling.data = aiResponse;
-        await saveCacheToFile(cache);
     } catch (err) {
         console.error("AI Bundling error:", err.message);
 
-        if (cache.bundling.data) {
-            return res.json(cache.bundling.data);
+        if (cached) {
+            return res.json(cached.data);
         }
 
         throw err;
     }
+
+    await setCachedPrediction('bundling', cacheKey, aiResponse);
 
     res.json(aiResponse);
 });

@@ -38,6 +38,8 @@ model Product {
 
   batches        ProductBatch[]
 
+  @@index([organizationId])
+  @@index([categoryId])
   @@map("products")
 }
 
@@ -99,6 +101,7 @@ model ProductBatch {
 
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
+  @@index([productId, createdAt])
   @@map("product_batches")
 }
 

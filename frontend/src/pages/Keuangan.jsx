@@ -23,6 +23,7 @@ import {
 const expenseColors = ["#2936C4", "#66D3CC", "#98A81D", "#CBD5E1"];
 
 import { API_BASE } from '../utils/api';
+import { normalizeTypeForm, isIncomeType } from '../utils/txType';
 
 const periodToApi = {
     "7 Hari Terakhir": "week",
@@ -260,13 +261,6 @@ export default function Keuangan() {
         }
     };
 
-    const normalizeTypeForm = (type) => {
-        const t = String(type || "").toLowerCase().trim();
-        if (t === "pemasukan" || t === "masuk" || t === "income") return "Masuk";
-        if (t === "pengeluaran" || t === "keluar" || t === "expense") return "Keluar";
-        return type;
-    };
-
     const toDatetimeLocal = (value) => {
         if (!value) return "";
         const d = new Date(value);
@@ -383,11 +377,6 @@ export default function Keuangan() {
         if (name === "pemasukan") return "Pemasukan";
         if (name === "pengeluaran") return "Pengeluaran";
         return name;
-    };
-
-    const isIncomeType = (type) => {
-        const t = String(type || "").toLowerCase().trim();
-        return t === "masuk" || t === "pemasukan" || t === "income";
     };
 
     return (
@@ -861,12 +850,13 @@ export default function Keuangan() {
                                     <div className="p-4">
                                         <div className="space-y-2">
                                             {detailTx.items.cart.map((x, idx) => {
-                                                const lineTotal = Number(x.lineTotal ?? (Number(x.price || 0) * Number(x.qty || 0)));
+                                                const unitPrice = Number(x.price || x.costPrice || 0);
+                                                const lineTotal = Number(x.lineTotal ?? (unitPrice * Number(x.qty || 0)));
                                                 return (
                                                     <div key={`${x.productId ?? x.name}-${idx}`} className="flex items-center justify-between text-sm">
                                                         <div className="min-w-0 pr-2">
-                                                            <p className="font-bold text-[#23262F] truncate">{x.name}</p>
-                                                            <p className="text-[11px] text-[#8B95A7]">{x.qty} x Rp {Number(x.price || 0).toLocaleString("id-ID")}</p>
+                                                            <p className="font-bold text-[#23262F] truncate">{x.name || `Produk #${x.productId}`}</p>
+                                                            <p className="text-[11px] text-[#8B95A7]">{x.qty} x Rp {unitPrice.toLocaleString("id-ID")}</p>
                                                         </div>
                                                         <p className="font-bold text-[#23262F] whitespace-nowrap">Rp {lineTotal.toLocaleString("id-ID")}</p>
                                                     </div>
@@ -883,7 +873,8 @@ export default function Keuangan() {
                                                             detailTx.items.subtotal !== undefined
                                                                 ? detailTx.items.subtotal
                                                                 : detailTx.items.cart.reduce((sum, item) => {
-                                                                    const line = Number(item.lineTotal ?? (Number(item.price || 0) * Number(item.qty || 0)));
+                                                                    const unit = Number(item.price || item.costPrice || 0);
+                                                                    const line = Number(item.lineTotal ?? (unit * Number(item.qty || 0)));
                                                                     return sum + line;
                                                                   }, 0)
                                                         ).toLocaleString("id-ID")}
@@ -904,7 +895,8 @@ export default function Keuangan() {
                                                             detailTx.items.total !== undefined
                                                                 ? detailTx.items.total
                                                                 : detailTx.items.cart.reduce((sum, item) => {
-                                                                    const line = Number(item.lineTotal ?? (Number(item.price || 0) * Number(item.qty || 0)));
+                                                                    const unit = Number(item.price || item.costPrice || 0);
+                                                                    const line = Number(item.lineTotal ?? (unit * Number(item.qty || 0)));
                                                                     return sum + line;
                                                                   }, 0)
                                                         ).toLocaleString("id-ID")}
