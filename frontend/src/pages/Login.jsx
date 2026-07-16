@@ -98,7 +98,7 @@ export default function Login({ onLogin }) {
             disabled={isSubmitting}
             className="w-full rounded-xl bg-[#2936C4] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#232EA8] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? 'Memeriksa...' : 'Masuk'}
+            {isSubmitting ? 'Masuk...' : 'Masuk'}
           </button>
         </form>
 

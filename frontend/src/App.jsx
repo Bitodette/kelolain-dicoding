@@ -18,6 +18,7 @@ import Landing from "./pages/Landing";
 import Profile from "./pages/Profile";
 import { applyAuthHeader, getStoredAuth, setStoredAuth } from "./utils/auth";
 import { API_BASE } from "./utils/api";
+import LoadingSpinner from "./components/LoadingSpinner";
 import axios from "axios";
 
 const routeToTab = {
@@ -137,6 +138,10 @@ function App() {
     setAuth(null);
     navigate('/login', { replace: true });
   };
+
+  if (!authLoaded) {
+    return <LoadingSpinner fullScreen text="Memuat..." />;
+  }
 
   return (
     <ToastProvider>

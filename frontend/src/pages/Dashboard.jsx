@@ -18,6 +18,7 @@ import {
 } from "recharts";
 
 import { API_BASE } from '../utils/api';
+import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function Dashboard() {
     const [chartData, setChartData] = useState([]);
@@ -185,7 +186,7 @@ export default function Dashboard() {
                     <div className="flex-1 flex flex-col min-h-0">
                         <div className="flex-1 min-h-0 w-full">
                             {isFinanceLoading ? (
-                                <div className="h-full w-full flex items-center justify-center text-sm text-[#8B95A7]">Memuat grafik...</div>
+                                <div className="h-full w-full flex items-center justify-center"><LoadingSpinner text="" /></div>
                             ) : financeError ? (
                                 <div className="h-full w-full flex items-center justify-center text-sm text-[#E02D3C]">{financeError}</div>
                             ) : !hasChartData ? (
@@ -226,7 +227,7 @@ export default function Dashboard() {
                     <div className="flex-1 overflow-y-auto w-full">
                         <ul className="divide-y divide-[#E6E8EC] w-full">
                             {isStockLoading ? (
-                                <li className="py-10 text-center text-sm text-[#8B95A7]">Memuat stok...</li>
+                                <li className="py-10 flex justify-center"><LoadingSpinner text="" /></li>
                             ) : lowStockItems.length === 0 ? (
                                 <li className="py-10 text-center text-sm text-[#8B95A7]">Tidak ada stok menipis.</li>
                             ) : (
