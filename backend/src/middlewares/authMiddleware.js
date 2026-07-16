@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const prisma = require('../config/db');
+const { getCachedUser, fetchAndCacheUser } = require('../utils/userCache');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -7,7 +7,6 @@ if (!JWT_SECRET) {
     process.exit(1);
 }
 
-// verify jwt + attach user ke req
 exports.authenticate = async (req, res, next) => {
     const authHeader = req.headers.authorization || '';
     const token = authHeader.replace(/^Bearer\s+/i, '');
@@ -23,10 +22,10 @@ exports.authenticate = async (req, res, next) => {
             return res.status(401).json({ error: 'Token tidak valid' });
         }
 
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            include: { roles: { include: { role: true } }, organization: true },
-        });
+        let user = await getCachedUser(userId);
+        if (!user) {
+            user = await fetchAndCacheUser(userId);
+        }
 
         if (!user || !user.active) {
             return res.status(401).json({ error: 'Pengguna tidak ditemukan atau tidak aktif' });

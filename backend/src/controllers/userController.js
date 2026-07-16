@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const prisma = require('../config/db');
 const { asyncHandler } = require('../middlewares/errorHandler');
+const { invalidateUser, invalidateOrgUsers } = require('../utils/userCache');
 
 const normalizeRoleIds = (roleIds) => {
     if (!Array.isArray(roleIds)) return [];
@@ -110,6 +111,7 @@ exports.updateUser = asyncHandler(async (req, res) => {
         data: patch,
     });
     if (updateResult.count === 0) return res.status(404).json({ error: 'Pengguna tidak ditemukan' });
+    invalidateUser(id);
     const user = await prisma.user.findFirst({ where: { id, organizationId: req.user.organizationId }, include: { roles: { include: { role: true } } } });
 
     res.json({
@@ -129,5 +131,6 @@ exports.deleteUser = asyncHandler(async (req, res) => {
 
     const deleteResult = await prisma.user.deleteMany({ where: { id, organizationId: req.user.organizationId } });
     if (deleteResult.count === 0) return res.status(404).json({ error: 'Pengguna tidak ditemukan' });
+    invalidateUser(id);
     res.json({ message: 'Pengguna berhasil dihapus' });
 });

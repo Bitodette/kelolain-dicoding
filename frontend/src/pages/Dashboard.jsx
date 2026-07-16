@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
-import { getStoredAuth } from '../utils/auth';
 import {
     CubeIcon,
     ShoppingCartIcon,
@@ -30,10 +29,48 @@ export default function Dashboard() {
     const [lowStockItems, setLowStockItems] = useState([]);
     const [isStockLoading, setIsStockLoading] = useState(true);
     const [userName, setUserName] = useState('Faried');
+    const [userOrg, setUserOrg] = useState('');
 
     useEffect(() => {
-        const stored = getStoredAuth();
-        setUserName(stored?.user?.name || stored?.user?.username || 'Faried');
+        const fetchDashboard = async () => {
+            try {
+                setIsFinanceLoading(true);
+                setIsStockLoading(true);
+                setFinanceError(null);
+
+                const res = await axios.get(`${API_BASE}/api/dashboard`);
+                const data = res.data;
+
+                const ws = data.weekSummary || {};
+                setTotals({ pemasukan: ws.pemasukan || 0, pengeluaran: ws.pengeluaran || 0, keuntunganBersih: ws.keuntunganBersih || 0 });
+                setTransactionCount(ws.transactionCount || 0);
+                setChartData(
+                    (ws.trend || []).map((x) => ({
+                        label: x.label,
+                        omzet: Number(x.pemasukan) || 0,
+                        untung: Number(x.keuntunganBersih) || 0,
+                    }))
+                );
+
+                setLowStockItems(data.lowStockItems || []);
+            } catch (e) {
+                console.error("Gagal mengambil data dashboard:", e);
+                setFinanceError("Gagal memuat ringkasan bisnis.");
+            } finally {
+                setIsFinanceLoading(false);
+                setIsStockLoading(false);
+            }
+        };
+
+        fetchDashboard();
+    }, []);
+
+    useEffect(() => {
+        try {
+            const stored = JSON.parse(window.localStorage.getItem('kelolain_auth') || 'null');
+            setUserName(stored?.user?.name || stored?.user?.username || 'Faried');
+            setUserOrg(stored?.user?.organizationName || '');
+        } catch { /* ignore */ }
     }, []);
 
     // salam berdasarkan jam
@@ -48,87 +85,6 @@ export default function Dashboard() {
     const getCondition = () => {
         return "baik";
     };
-
-    useEffect(() => {
-        const fetchFinance = async () => {
-            try {
-                setIsFinanceLoading(true);
-                setFinanceError(null);
-
-                const res = await axios.get(`${API_BASE}/api/finance/overview`, { params: { period: "week" } });
-                const data = res.data;
-
-                setTotals(data?.totals || { pemasukan: 0, pengeluaran: 0, keuntunganBersih: 0 });
-                setTransactionCount(Number(data?.transactionCount) || 0);
-
-                const trend = Array.isArray(data?.trend) ? data.trend : [];
-                setChartData(
-                    trend.map((x) => {
-                        const pemasukan = Number(x.pemasukan) || 0;
-                        const pengeluaran = Number(x.pengeluaran) || 0;
-                        const profitFromApi = Number(x.keuntunganBersih);
-                        const untung = Number.isFinite(profitFromApi) ? profitFromApi : (pemasukan - pengeluaran);
-                        return {
-                            label: x.label,
-                            omzet: pemasukan,
-                            untung,
-                        };
-                    })
-                );
-            } catch (e) {
-                console.error("Gagal mengambil data dashboard (finance)", e);
-                setFinanceError("Gagal memuat ringkasan bisnis.");
-                setTotals({ pemasukan: 0, pengeluaran: 0, keuntunganBersih: 0 });
-                setTransactionCount(0);
-                setChartData([]);
-            } finally {
-                setIsFinanceLoading(false);
-            }
-        };
-
-        fetchFinance();
-    }, []);
-
-    useEffect(() => {
-        const fetchLowStock = async () => {
-            try {
-                setIsStockLoading(true);
-                const [productsRes, demandRes] = await Promise.all([
-                    axios.get(`${API_BASE}/api/products`),
-                    axios.get(`${API_BASE}/api/ai/demand`),
-                ]);
-
-                const products = Array.isArray(productsRes.data) ? productsRes.data : [];
-                const demandResult = Array.isArray(demandRes.data?.result) ? demandRes.data.result : [];
-                const demandMap = new Map(demandResult.map((item) => [String(item.product || '').trim().toLowerCase(), item.lasting_day]));
-
-                const threshold = 5;
-                const items = products
-                    .filter((p) => (Number(p.stock) || 0) <= threshold)
-                    .sort((a, b) => (Number(a.stock) || 0) - (Number(b.stock) || 0))
-                    .slice(0, 4)
-                    .map((p) => {
-                        const lastingDay = demandMap.get(String(p.name || '').trim().toLowerCase());
-                        return {
-                            id: p.id,
-                            name: p.name,
-                            stock: Number(p.stock) || 0,
-                            threshold,
-                            est: Number.isFinite(Number(lastingDay)) ? `${lastingDay} hari` : null,
-                        };
-                    });
-
-                setLowStockItems(items);
-            } catch (e) {
-                console.error("Gagal mengambil data dashboard (stok)", e);
-                setLowStockItems([]);
-            } finally {
-                setIsStockLoading(false);
-            }
-        };
-
-        fetchLowStock();
-    }, []);
 
     const totalOmzet = totals.pemasukan || 0;
     const totalUntung = totals.keuntunganBersih || 0;
@@ -286,7 +242,7 @@ export default function Dashboard() {
                                         </Link>
                                         <p className="flex items-center gap-1 text-[10px] text-[#8B95A7] mt-1 bg-gray-100 px-1.5 py-0.5 rounded">
                                             <SparklesIcon className="w-3 h-3 text-emerald-500" />
-                                            {item.est || 'Estimasi belum tersedia'}
+                                            {item.est ? `${item.est} hari` : 'Estimasi belum tersedia'}
                                         </p>
                                     </div>
                                 </li>

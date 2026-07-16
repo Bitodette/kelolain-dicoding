@@ -11,7 +11,9 @@ const categoryController = require('../controllers/categoryController');
 const roleController = require('../controllers/roleController');
 const userController = require('../controllers/userController');
 const notificationController = require('../controllers/notificationController');
+const dashboardController = require('../controllers/dashboardController');
 const { authenticate } = require('../middlewares/authMiddleware');
+const { authorize } = require('../middlewares/authorize');
 const multer = require('multer');
 
 const upload = multer({
@@ -31,48 +33,51 @@ router.post('/auth/register', authLimiter, authController.register);
 router.get('/auth/me', authController.me);
 router.put('/auth/profile', authenticate, authController.updateProfile);
 
-// ROUTES PRODUK
-router.get('/products', authenticate, productController.getProducts);
-router.post('/products', authenticate, productController.createProduct);
-router.put('/products/:id', authenticate, productController.updateProduct);
-router.post('/products/:id/restock', authenticate, productController.restockProduct);
-router.delete('/products/:id', authenticate, productController.deleteProduct);
+// ROUTES PRODUK (butuh akses halaman 'produk')
+router.get('/products', authenticate, authorize('produk'), productController.getProducts);
+router.post('/products', authenticate, authorize('produk'), productController.createProduct);
+router.put('/products/:id', authenticate, authorize('produk'), productController.updateProduct);
+router.post('/products/:id/restock', authenticate, authorize('produk'), productController.restockProduct);
+router.delete('/products/:id', authenticate, authorize('produk'), productController.deleteProduct);
 
-// ROUTES KATEGORI
-router.get('/categories', authenticate, categoryController.getCategories);
-router.post('/categories', authenticate, categoryController.createCategory);
-router.delete('/categories/:id', authenticate, categoryController.deleteCategory);
+// ROUTES KATEGORI (dikelola dari halaman 'produk')
+router.get('/categories', authenticate, authorize('produk'), categoryController.getCategories);
+router.post('/categories', authenticate, authorize('produk'), categoryController.createCategory);
+router.delete('/categories/:id', authenticate, authorize('produk'), categoryController.deleteCategory);
 
-// ROUTES ROLE
-router.get('/roles', authenticate, roleController.getRoles);
-router.post('/roles', authenticate, roleController.createRole);
-router.put('/roles/:id', authenticate, roleController.updateRole);
-router.delete('/roles/:id', authenticate, roleController.deleteRole);
+// ROUTES ROLE (admin - butuh akses halaman 'settings')
+router.get('/roles', authenticate, authorize('settings'), roleController.getRoles);
+router.post('/roles', authenticate, authorize('settings'), roleController.createRole);
+router.put('/roles/:id', authenticate, authorize('settings'), roleController.updateRole);
+router.delete('/roles/:id', authenticate, authorize('settings'), roleController.deleteRole);
 
-// ROUTES USER
-router.get('/users', authenticate, userController.getUsers);
-router.post('/users', authenticate, userController.createUser);
-router.put('/users/:id', authenticate, userController.updateUser);
-router.delete('/users/:id', authenticate, userController.deleteUser);
+// ROUTES USER (admin - butuh akses halaman 'settings')
+router.get('/users', authenticate, authorize('settings'), userController.getUsers);
+router.post('/users', authenticate, authorize('settings'), userController.createUser);
+router.put('/users/:id', authenticate, authorize('settings'), userController.updateUser);
+router.delete('/users/:id', authenticate, authorize('settings'), userController.deleteUser);
 
-// ROUTES TRANSAKSI 
-router.get('/transactions', authenticate, transactionController.getTransactions);
-router.post('/transactions', authenticate, transactionController.createTransaction);
-router.get('/transactions/:id', authenticate, transactionController.getTransactionById);
-router.put('/transactions/:id', authenticate, transactionController.updateTransaction);
-router.delete('/transactions/:id', authenticate, transactionController.deleteTransaction);
+// ROUTES TRANSAKSI (butuh akses 'kasir' atau 'keuangan')
+router.get('/transactions', authenticate, authorize('kasir', 'keuangan'), transactionController.getTransactions);
+router.post('/transactions', authenticate, authorize('kasir'), transactionController.createTransaction);
+router.get('/transactions/:id', authenticate, authorize('kasir', 'keuangan'), transactionController.getTransactionById);
+router.put('/transactions/:id', authenticate, authorize('kasir', 'keuangan'), transactionController.updateTransaction);
+router.delete('/transactions/:id', authenticate, authorize('kasir', 'keuangan'), transactionController.deleteTransaction);
 
-// ROUTES AGREGASI FINANSIAL
-router.get('/finance/overview', authenticate, financeController.getFinanceOverview);
+// ROUTES AGREGASI FINANSIAL (butuh akses halaman 'keuangan')
+router.get('/finance/overview', authenticate, authorize('keuangan'), financeController.getFinanceOverview);
 
-// ROUTES AI
+// ROUTES DASHBOARD (semua yang login bisa akses)
+router.get('/dashboard', authenticate, dashboardController.getDashboardSummary);
+
+// ROUTES AI (dipakai di beberapa halaman, cukup auth saja)
 router.get('/ai/revenue', authenticate, aiController.getRevenuePrediction);
 router.get('/ai/demand', authenticate, aiController.getDemandPrediction);
 router.get('/ai/bundling', authenticate, aiController.getBundlingSuggestion);
 router.post('/ai/ocr/check-blur', authenticate, upload.single('receipt'), aiController.checkReceiptBlur);
 router.post('/ai/ocr/scan', authenticate, upload.single('receipt'), aiController.scanReceipt);
 
-// ROUTES NOTIFIKASI
+// ROUTES NOTIFIKASI (semua yang login bisa akses)
 router.get('/notifications', authenticate, notificationController.getNotifications);
 router.patch('/notifications/read-all', authenticate, notificationController.markAllRead);
 router.patch('/notifications/:id/read', authenticate, notificationController.markRead);

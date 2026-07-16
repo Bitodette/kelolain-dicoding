@@ -16,6 +16,7 @@
   "dependencies": {
     "@prisma/client": "^6.9.0",
     "@supabase/supabase-js": "^2.35.0",
+    "@upstash/redis": "^1.38.0",
     "axios": "^1.16.1",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
@@ -31,5 +32,8 @@
   "devDependencies": {
     "nodemon": "^3.1.14",
     "prisma": "^6.19.3"
+  },
+  "allowScripts": {
+    "sharp@0.34.5": true
   }
 }

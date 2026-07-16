@@ -1,5 +1,6 @@
 const prisma = require('../config/db');
 const { asyncHandler } = require('../middlewares/errorHandler');
+const { invalidateOrgUsers } = require('../utils/userCache');
 
 const normalizePages = (pages) => {
     if (!Array.isArray(pages)) return [];
@@ -43,6 +44,7 @@ exports.updateRole = asyncHandler(async (req, res) => {
 
     const updateResult = await prisma.role.updateMany({ where: { id, organizationId: req.user.organizationId }, data });
     if (updateResult.count === 0) return res.status(404).json({ error: 'Role tidak ditemukan' });
+    invalidateOrgUsers(req.user.organizationId);
     const role = await prisma.role.findFirst({ where: { id, organizationId: req.user.organizationId } });
     res.json(role);
 });
@@ -64,5 +66,6 @@ exports.deleteRole = asyncHandler(async (req, res) => {
 
     const deleteResult = await prisma.role.deleteMany({ where: { id, organizationId: req.user.organizationId } });
     if (deleteResult.count === 0) return res.status(404).json({ error: 'Role tidak ditemukan' });
+    invalidateOrgUsers(req.user.organizationId);
     res.json({ message: 'Role berhasil dihapus' });
 });

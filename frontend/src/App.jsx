@@ -138,14 +138,6 @@ function App() {
     navigate('/login', { replace: true });
   };
 
-  if (auth?.token && !authLoaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white text-[#23262F]">
-        Memuat data pengguna...
-      </div>
-    );
-  }
-
   return (
     <ToastProvider>
     <ConfirmProvider>

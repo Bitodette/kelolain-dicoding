@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const prisma = require('../config/db');
 const { asyncHandler } = require('../middlewares/errorHandler');
+const { getCachedUser, fetchAndCacheUser, invalidateUser, invalidateOrgUsers } = require('../utils/userCache');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -135,51 +136,54 @@ exports.login = async (req, res) => {
 };
 
 exports.me = async (req, res) => {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.replace(/^Bearer\s+/i, '');
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '');
 
-  if (!token) {
-    return res.status(401).json({ error: 'Token tidak ditemukan' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userId = Number(decoded.sub);
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: { roles: { include: { role: true } }, organization: true },
-    });
-
-    if (!user || !user.active) {
-      return res.status(401).json({ error: 'Token tidak valid atau pengguna tidak aktif' });
+    if (!token) {
+        return res.status(401).json({ error: 'Token tidak ditemukan' });
     }
 
-    return res.json({ user: buildUserResponse(user) });
-  } catch (error) {
-    return res.status(401).json({ error: 'Token tidak valid' });
-  }
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const userId = Number(decoded.sub);
+
+        let user = await getCachedUser(userId);
+        if (!user) {
+            user = await fetchAndCacheUser(userId);
+        }
+
+        if (!user || !user.active) {
+            return res.status(401).json({ error: 'Token tidak valid atau pengguna tidak aktif' });
+        }
+
+        return res.json({ user: buildUserResponse(user) });
+    } catch (error) {
+        return res.status(401).json({ error: 'Token tidak valid' });
+    }
 };
 
 exports.updateProfile = asyncHandler(async (req, res) => {
-  const { name, password } = req.body;
-  const userId = req.user.id;
-  const patch = {};
+    const { name, password } = req.body;
+    const userId = req.user.id;
+    const patch = {};
 
-  if (name !== undefined) {
-    patch.name = String(name || '').trim();
-  }
+    if (name !== undefined) {
+        patch.name = String(name || '').trim();
+    }
 
-  if (password) {
-    patch.password = await bcrypt.hash(String(password), 10);
-  }
+    if (password) {
+        patch.password = await bcrypt.hash(String(password), 10);
+    }
 
-  const updatedUser = await prisma.user.update({
-    where: { id: userId },
-    data: patch,
-    include: { roles: { include: { role: true } }, organization: true },
-  });
+    const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: patch,
+        include: { roles: { include: { role: true } }, organization: true },
+    });
 
-  return res.json({ user: buildUserResponse(updatedUser) });
+    invalidateUser(userId);
+
+    return res.json({ user: buildUserResponse(updatedUser) });
 });
 
 
