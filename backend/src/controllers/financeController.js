@@ -6,6 +6,13 @@ const { isIncome, isExpense, normalizeType } = require('../utils/txType');
 const INCOME_VARIANTS = ['masuk', 'pemasukan', 'income'];
 const EXPENSE_VARIANTS = ['keluar', 'pengeluaran', 'expense'];
 
+const financeCache = new Map();
+const CACHE_TTL = 30000;
+
+function getCacheKey(orgId, period, start, end) {
+    return `finance:${orgId}:${period}:${start.getTime()}:${end.getTime()}`;
+}
+
 async function getAvailability(prismaClient, organizationId) {
     const now = new Date();
     const ranges = {
@@ -29,10 +36,28 @@ async function getAvailability(prismaClient, organizationId) {
     };
 }
 
+async function getAggregates(prismaClient, organizationId, range) {
+    const aggregates = await prismaClient.transactions.groupBy({
+        by: ['type'],
+        where: { organizationId, createdAt: { gte: range.start, lte: range.end } },
+        _sum: { amount: true },
+    });
+
+    let pemasukan = 0;
+    let pengeluaran = 0;
+    for (const agg of aggregates) {
+        const amt = Number(agg._sum.amount) || 0;
+        const ty = normalizeType(agg.type);
+        if (INCOME_VARIANTS.includes(ty)) pemasukan += amt;
+        if (EXPENSE_VARIANTS.includes(ty)) pengeluaran += amt;
+    }
+    return { pemasukan, pengeluaran, keuntunganBersih: pemasukan - pengeluaran };
+}
+
 exports.getFinanceOverview = asyncHandler(async (req, res) => {
     const now = new Date();
     const requestedPeriod = String(req.query.period || 'month').toLowerCase();
-    const availability = await getAvailability(prisma, req.user.organizationId);
+    const orgId = req.user.organizationId;
 
     const period = ['week', 'month', 'year', 'all', 'custom'].includes(requestedPeriod) ? requestedPeriod : 'month';
     let effectivePeriod = period;
@@ -49,32 +74,29 @@ exports.getFinanceOverview = asyncHandler(async (req, res) => {
         if (!startDate || !endDate) return res.status(400).json({ error: 'Query start dan end wajib untuk period=custom' });
         range = { start: startOfDay(startDate), end: endOfDay(endDate) };
     } else {
-        const min = await prisma.transactions.findFirst({ where: { organizationId: req.user.organizationId }, orderBy: { createdAt: 'asc' } });
-        const max = await prisma.transactions.findFirst({ where: { organizationId: req.user.organizationId }, orderBy: { createdAt: 'desc' } });
+        const min = await prisma.transactions.findFirst({ where: { organizationId: orgId }, orderBy: { createdAt: 'asc' } });
+        const max = await prisma.transactions.findFirst({ where: { organizationId: orgId }, orderBy: { createdAt: 'desc' } });
         if (!min || !max) range = getMonthRange(now);
         else range = { start: startOfDay(new Date(min.createdAt)), end: endOfDay(new Date(max.createdAt)) };
     }
 
-    const tx = await prisma.transactions.findMany({
-        where: { organizationId: req.user.organizationId, createdAt: { gte: range.start, lte: range.end } },
-        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-    });
-
-    let pemasukan = 0;
-    let pengeluaran = 0;
-    let keuntunganBersih = 0;
-    for (const t of tx) {
-        const amt = Number(t.amount) || 0;
-
-        if (isIncome(t)) {
-            pemasukan += amt;
-            keuntunganBersih += amt;
-        }
-        if (isExpense(t)) {
-            pengeluaran += amt;
-            keuntunganBersih -= amt;
-        }
+    const cacheKey = getCacheKey(orgId, effectivePeriod, range.start, range.end);
+    const cached = financeCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return res.json(cached.data);
     }
+
+    const [availability, aggregates, tx] = await Promise.all([
+        getAvailability(prisma, orgId),
+        getAggregates(prisma, orgId, range),
+        prisma.transactions.findMany({
+            where: { organizationId: orgId, createdAt: { gte: range.start, lte: range.end } },
+            orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+            take: 1000,
+        }),
+    ]);
+
+    const { pemasukan, pengeluaran, keuntunganBersih } = aggregates;
 
     const trend = buildTrend({ period: effectivePeriod, start: range.start, end: range.end, transactions: tx });
     const breakdown = buildExpenseBreakdown(tx);
@@ -93,7 +115,6 @@ exports.getFinanceOverview = asyncHandler(async (req, res) => {
     }
     const projection7d = last7.length >= 2 ? Math.round(net7) : null;
 
-    // --- komparasi periode sebelumnya ---
     const computeChange = (curr, prev) => {
         if (prev === 0) return curr > 0 ? { change: 100, previous: 0 } : { change: 0, previous: 0 };
         return { change: Math.round(((curr - prev) / prev) * 1000) / 10, previous: prev };
@@ -124,7 +145,7 @@ exports.getFinanceOverview = asyncHandler(async (req, res) => {
     if (prevRange) {
         const prevAggregates = await prisma.transactions.groupBy({
             by: ['type'],
-            where: { organizationId: req.user.organizationId, createdAt: { gte: prevRange.start, lte: prevRange.end } },
+            where: { organizationId: orgId, createdAt: { gte: prevRange.start, lte: prevRange.end } },
             _sum: { amount: true },
         });
 
@@ -144,10 +165,13 @@ exports.getFinanceOverview = asyncHandler(async (req, res) => {
         };
     }
 
-    res.json({
+    const result = {
         requestedPeriod: period, effectivePeriod, isFallback: false,
         range: { start: range.start.toISOString(), end: range.end.toISOString() },
         totals: { pemasukan, pengeluaran, keuntunganBersih },
         comparison, projection7d, trend, expenseBreakdown: breakdown, availability, transactionCount: tx.length,
-    });
+    };
+
+    financeCache.set(cacheKey, { data: result, timestamp: Date.now() });
+    res.json(result);
 });

@@ -40,6 +40,7 @@ model Product {
 
   @@index([organizationId])
   @@index([categoryId])
+  @@index([organizationId, stock])
   @@map("products")
 }
 
@@ -118,6 +119,7 @@ model transactions {
   items     Json?
 
   @@index([organizationId, type, createdAt])
+  @@index([organizationId, createdAt])
   @@map("transactions")
 }
 
@@ -134,5 +136,6 @@ model Notification {
   updatedAt      DateTime     @updatedAt
 
   @@index([organizationId, read])
+  @@index([organizationId, createdAt])
   @@map("notifications")
 }

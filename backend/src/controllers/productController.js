@@ -17,7 +17,7 @@ exports.getProducts = asyncHandler(async (req, res) => {
         return res.json({ data: products, total, page, totalPages: Math.ceil(total / limit) });
     }
 
-    const products = await prisma.product.findMany({ where: { organizationId: orgId }, orderBy: { id: 'asc' }, take: 200 });
+    const products = await prisma.product.findMany({ where: { organizationId: orgId }, orderBy: { id: 'asc' }, take: 50 });
     res.json(products);
 });
 
