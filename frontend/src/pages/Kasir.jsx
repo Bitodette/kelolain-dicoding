@@ -27,6 +27,7 @@ export default function Kasir() {
     const [cart, setCart] = useState([]);
     const [discount, setDiscount] = useState(0);
     const [isCartOpenMobile, setIsCartOpenMobile] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     // --- FETCH DATA DARI API ---
     const fetchProducts = async () => {
@@ -114,8 +115,9 @@ export default function Kasir() {
     };
 
     const handleCheckout = async () => {
-        if (cart.length === 0) return;
+        if (cart.length === 0 || isProcessing) return;
 
+        setIsProcessing(true);
         try {
             // 2. Catat pemasukan ke transaksi
             await axios.post(`${API_BASE}/api/transactions`, {
@@ -147,6 +149,8 @@ export default function Kasir() {
         } catch (err) {
             console.error("Gagal memproses pembayaran:", err);
             addToast("Gagal memproses pembayaran, coba lagi.", 'error');
+        } finally {
+            setIsProcessing(false);
         }
     };
 
@@ -381,12 +385,21 @@ export default function Kasir() {
                     </div>
                     
                     <button 
-                        disabled={cart.length === 0}
+                        disabled={cart.length === 0 || isProcessing}
                         onClick={handleCheckout}
-                        className={`btn ${cart.length === 0 ? "bg-gray-300 cursor-not-allowed text-[#9CA3AF]" : "btn-success"} w-full py-3 sm:py-3.5 text-sm sm:text-base`}
+                        className={`btn ${cart.length === 0 || isProcessing ? "bg-gray-300 cursor-not-allowed text-[#9CA3AF]" : "btn-success"} w-full py-3 sm:py-3.5 text-sm sm:text-base flex items-center justify-center gap-2`}
                     >
-                        <BanknotesIcon className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
-                        <span className="truncate">Proses Pembayaran {cart.length > 0 && <span className="lg:hidden">- Rp {total.toLocaleString("id-ID")}</span>}</span>
+                        {isProcessing ? (
+                            <>
+                                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                                <span>Memproses...</span>
+                            </>
+                        ) : (
+                            <>
+                                <BanknotesIcon className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
+                                <span className="truncate">Proses Pembayaran {cart.length > 0 && <span className="lg:hidden">- Rp {total.toLocaleString("id-ID")}</span>}</span>
+                            </>
+                        )}
                     </button>
                 </div>
             </div>
