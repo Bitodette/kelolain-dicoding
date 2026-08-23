@@ -425,6 +425,10 @@ exports.scanReceipt = asyncHandler(async (req, res) => {
             isBlurry = blurRes.data?.prediction === 'blurry';
         } catch (err) {
             console.error('Blur check AI service error:', err.message);
+            return res.status(503).json({
+                message: 'Layanan pemeriksa ketajaman gambar tidak tersedia. Silakan coba lagi.',
+                error: 'blur_check_unavailable',
+            });
         }
 
         if (isBlurry) {

@@ -52,70 +52,6 @@ function normalizeOcrItems(responseData) {
     });
 }
 
-function toGrayscale(pixels) {
-    const gray = new Uint8ClampedArray(pixels.length / 4);
-    for (let i = 0, j = 0; i < pixels.length; i += 4, j += 1) {
-        gray[j] = Math.round((pixels[i] * 0.299) + (pixels[i + 1] * 0.587) + (pixels[i + 2] * 0.114));
-    }
-    return gray;
-}
-
-function estimateSharpness(gray, width, height) {
-    let sum = 0;
-    let count = 0;
-    const kernel = [0, 1, 0, 1, -4, 1, 0, 1, 0];
-
-    for (let y = 1; y < height - 1; y += 1) {
-        for (let x = 1; x < width - 1; x += 1) {
-            const center = gray[y * width + x];
-            let lap = 0;
-            let k = 0;
-            for (let ky = -1; ky <= 1; ky += 1) {
-                for (let kx = -1; kx <= 1; kx += 1) {
-                    const pixel = gray[(y + ky) * width + (x + kx)];
-                    lap += pixel * kernel[k];
-                    k += 1;
-                }
-            }
-            sum += lap * lap;
-            count += 1;
-        }
-    }
-
-    return count > 0 ? sum / count : 0;
-}
-
-function checkImageSharpness(file) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        const url = URL.createObjectURL(file);
-        img.onload = () => {
-            const width = 240;
-            const height = Math.round((img.height / img.width) * width);
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                URL.revokeObjectURL(url);
-                reject(new Error('Tidak dapat memproses gambar.'));
-                return;
-            }
-            ctx.drawImage(img, 0, 0, width, height);
-            const imageData = ctx.getImageData(0, 0, width, height);
-            const gray = toGrayscale(imageData.data);
-            const sharpness = estimateSharpness(gray, width, height);
-            URL.revokeObjectURL(url);
-            resolve(sharpness);
-        };
-        img.onerror = () => {
-            URL.revokeObjectURL(url);
-            reject(new Error('Gagal memuat gambar.'));
-        };
-        img.src = url;
-    });
-}
-
 export default function useReceiptScanner({ products, onScanComplete }) {
     const fileInputRef = useRef(null);
     const cameraVideoRef = useRef(null);
@@ -191,8 +127,10 @@ export default function useReceiptScanner({ products, onScanComplete }) {
         setScanError(null);
 
         try {
-            const sharpness = await checkImageSharpness(file);
-            setBlurStatus(sharpness < 1000 ? 'blurry' : 'sharp');
+            const formData = new FormData();
+            formData.append('receipt', file);
+            const response = await axios.post(`${API_BASE}/api/ai/ocr/check-blur`, formData);
+            setBlurStatus(response.data.prediction === 'blurry' ? 'blurry' : 'sharp');
         } catch (err) {
             console.error('Gagal memeriksa ketajaman gambar:', err);
             setBlurStatus('unknown');
