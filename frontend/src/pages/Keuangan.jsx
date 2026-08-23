@@ -23,6 +23,7 @@ import {
 const expenseColors = ["#2936C4", "#66D3CC", "#98A81D", "#CBD5E1"];
 
 import { API_BASE } from '../utils/api';
+import { cachedGet, invalidateApiCache, CACHE_PREFIXES, TTL } from '../utils/apiCache';
 import { normalizeTypeForm, isIncomeType } from '../utils/txType';
 
 const periodToApi = {
@@ -108,8 +109,8 @@ export default function Keuangan() {
             const params = { limit: 50 };
             if (start) params.start = start;
             if (end) params.end = end;
-            const response = await axios.get(`${API_BASE}/api/transactions`, { params });
-            setTransactions(response.data);
+            const data = await cachedGet(`${API_BASE}/api/transactions`, { params });
+            setTransactions(data);
         } catch (error) {
             console.error("Gagal mengambil data transaksi", error);
         } finally {
@@ -128,8 +129,7 @@ export default function Keuangan() {
                 if (end) params.end = end;
             }
 
-            const response = await axios.get(`${API_BASE}/api/finance/overview`, { params });
-            const data = response.data;
+            const data = await cachedGet(`${API_BASE}/api/finance/overview`, { params });
 
             setFinanceTrendData(Array.isArray(data.trend) ? data.trend : []);
             setExpenseBreakdown(Array.isArray(data.expenseBreakdown) ? data.expenseBreakdown : []);
@@ -178,8 +178,8 @@ export default function Keuangan() {
     const fetchRevenuePrediction = async () => {
         try {
             setIsRevenuePredictionLoading(true);
-            const response = await axios.get(`${API_BASE}/api/ai/revenue`);
-            const revenueResult = Array.isArray(response.data?.result) ? response.data.result : [];
+            const data = await cachedGet(`${API_BASE}/api/ai/revenue`, { ttl: TTL.ai });
+            const revenueResult = Array.isArray(data?.result) ? data.result : [];
             setRevenuePrediction7Day(revenueResult.length ? revenueResult[revenueResult.length - 1] : null);
         } catch (error) {
             console.error("Gagal mengambil prediksi penghasilan kotor", error);
@@ -236,6 +236,7 @@ export default function Keuangan() {
             } else {
                 await axios.post(`${API_BASE}/api/transactions`, payload);
             }
+            invalidateApiCache(...CACHE_PREFIXES.transactions);
             // Refresh data di UI
             if (selectedPeriod === "Custom" && startDate && endDate) {
                 fetchTransactions({ start: startDate, end: endDate });
@@ -316,6 +317,7 @@ export default function Keuangan() {
         if (confirmed) {
             try {
                 await axios.delete(`${API_BASE}/api/transactions/${id}`);
+                invalidateApiCache(...CACHE_PREFIXES.transactions);
                 setTransactions(prev => prev.filter(t => t.id !== id));
                 fetchFinanceOverview({
                     period: periodToApi[selectedPeriod] || "month",

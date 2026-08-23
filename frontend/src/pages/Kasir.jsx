@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { API_BASE } from '../utils/api';
+import { cachedGet, invalidateApiCache, CACHE_PREFIXES, TTL } from '../utils/apiCache';
 import { useToast } from "../components/Toast";
 import { 
     MagnifyingGlassIcon, 
@@ -31,8 +32,8 @@ export default function Kasir() {
     const fetchProducts = async () => {
         try {
             setLoading(true);
-            const response = await axios.get(`${API_BASE}/api/products`);
-            setProducts(response.data);
+            const data = await cachedGet(`${API_BASE}/api/products`);
+            setProducts(data);
             setError(null);
         } catch (err) {
             console.error("Gagal mengambil data produk:", err);
@@ -49,8 +50,8 @@ export default function Kasir() {
 
     const fetchCategories = async () => {
         try {
-            const response = await axios.get(`${API_BASE}/api/categories`);
-            setCategories(response.data || []);
+            const data = await cachedGet(`${API_BASE}/api/categories`, { ttl: TTL.long });
+            setCategories(data || []);
         } catch (err) {
             console.error("Gagal mengambil kategori:", err);
         }
@@ -141,6 +142,7 @@ export default function Kasir() {
 
             addToast("Pembayaran berhasil diproses!", 'success');
             clearCart();
+            invalidateApiCache(...CACHE_PREFIXES.transactions, ...CACHE_PREFIXES.products);
             fetchProducts(); // Refresh list agar stok sinkron
         } catch (err) {
             console.error("Gagal memproses pembayaran:", err);

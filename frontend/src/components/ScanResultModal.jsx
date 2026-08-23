@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { API_BASE } from '../utils/api';
+import { invalidateApiCache, CACHE_PREFIXES } from '../utils/apiCache';
 import { XMarkIcon, ChevronDownIcon, CheckIcon } from "@heroicons/react/24/outline";
 
 export default function ScanResultModal({ isOpen, onClose, scannedItems, products, categories, onConfirm, addToast }) {
@@ -73,6 +74,7 @@ export default function ScanResultModal({ isOpen, onClose, scannedItems, product
             }
         }
 
+        invalidateApiCache(...CACHE_PREFIXES.products);
         try {
             await onConfirm(itemsToProcess);
         } catch (err) {

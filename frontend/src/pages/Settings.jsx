@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { getStoredAuth } from '../utils/auth';
 import { API_BASE } from '../utils/api';
+import { cachedGet, invalidateApiCache, TTL } from '../utils/apiCache';
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmDialog";
 import { PlusIcon, TrashIcon, PencilSquareIcon, CheckIcon } from "@heroicons/react/24/outline";
@@ -67,12 +68,12 @@ export default function Settings() {
     setLoading(true);
     setError(null);
     try {
-      const [rolesRes, usersRes] = await Promise.all([
-        axios.get(`${API_BASE}/api/roles`),
-        axios.get(`${API_BASE}/api/users`),
+      const [rolesData, usersData] = await Promise.all([
+        cachedGet(`${API_BASE}/api/roles`, { ttl: TTL.long }),
+        cachedGet(`${API_BASE}/api/users`),
       ]);
-      setRoles(rolesRes.data || []);
-      setUsers(usersRes.data || []);
+      setRoles(rolesData || []);
+      setUsers(usersData || []);
     } catch (err) {
       console.error('Gagal memuat data settings:', err);
       setError('Gagal memuat data. Pastikan Anda memiliki akses dan server menyala.');
@@ -98,6 +99,7 @@ export default function Settings() {
     if (!newRoleName.trim()) return addToast('Nama role wajib diisi', 'warning');
     try {
       await axios.post(`${API_BASE}/api/roles`, { name: newRoleName.trim(), pages: newRolePages });
+      invalidateApiCache(`${API_BASE}/api/roles`);
       setNewRoleName('');
       setNewRolePages([]);
       addToast('Role berhasil ditambahkan', 'success');
@@ -112,6 +114,7 @@ export default function Settings() {
     if (!confirmed) return;
     try {
       await axios.delete(`${API_BASE}/api/roles/${id}`);
+      invalidateApiCache(`${API_BASE}/api/roles`);
       addToast('Role berhasil dihapus', 'success');
       fetchData();
     } catch (err) {
@@ -169,6 +172,7 @@ export default function Settings() {
         addToast('Pengguna berhasil ditambahkan', 'success');
       }
       resetUserForm();
+      invalidateApiCache(`${API_BASE}/api/users`);
       fetchData();
     } catch (err) {
       addToast(err.response?.data?.error || 'Gagal menyimpan pengguna.', 'error');
@@ -181,6 +185,7 @@ export default function Settings() {
     try {
       await axios.delete(`${API_BASE}/api/users/${id}`);
       addToast('Pengguna berhasil dihapus', 'success');
+      invalidateApiCache(`${API_BASE}/api/users`);
       fetchData();
     } catch (err) {
       addToast(err.response?.data?.error || 'Gagal menghapus pengguna.', 'error');

@@ -16,6 +16,7 @@ import {
 } from "recharts";
 
 import { API_BASE } from '../utils/api';
+import { cachedGet, TTL } from '../utils/apiCache';
 
 const formatCurrency = (value) => `Rp ${Number(value || 0).toLocaleString("id-ID")}`;
 
@@ -29,9 +30,9 @@ export default function Insight() {
     useEffect(() => {
         const controller = new AbortController();
 
-        const fetchRevenue = axios.get(`${API_BASE}/api/ai/revenue`, { signal: controller.signal })
-            .then((res) => {
-                setRevenueForecast(Array.isArray(res.data?.result) ? res.data.result : []);
+        const fetchRevenue = cachedGet(`${API_BASE}/api/ai/revenue`, { signal: controller.signal, ttl: TTL.ai })
+            .then((data) => {
+                setRevenueForecast(Array.isArray(data?.result) ? data.result : []);
                 setLoading((prev) => ({ ...prev, revenue: false }));
             })
             .catch((err) => {
@@ -41,9 +42,9 @@ export default function Insight() {
                 }
             });
 
-        const fetchDemand = axios.get(`${API_BASE}/api/ai/demand`, { signal: controller.signal })
-            .then((res) => {
-                setDemandTop5(Array.isArray(res.data?.result) ? res.data.result : []);
+        const fetchDemand = cachedGet(`${API_BASE}/api/ai/demand`, { signal: controller.signal, ttl: TTL.ai })
+            .then((data) => {
+                setDemandTop5(Array.isArray(data?.result) ? data.result : []);
                 setLoading((prev) => ({ ...prev, demand: false }));
             })
             .catch((err) => {
@@ -53,9 +54,9 @@ export default function Insight() {
                 }
             });
 
-        const fetchBundling = axios.get(`${API_BASE}/api/ai/bundling`, { signal: controller.signal })
-            .then((res) => {
-                setBundlingSuggestions(Array.isArray(res.data?.result) ? res.data.result : []);
+        const fetchBundling = cachedGet(`${API_BASE}/api/ai/bundling`, { signal: controller.signal, ttl: TTL.ai })
+            .then((data) => {
+                setBundlingSuggestions(Array.isArray(data?.result) ? data.result : []);
                 setLoading((prev) => ({ ...prev, bundling: false }));
             })
             .catch((err) => {

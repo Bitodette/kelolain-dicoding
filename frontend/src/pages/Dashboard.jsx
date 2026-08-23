@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import { Link } from "react-router-dom";
 import {
     CubeIcon,
@@ -18,6 +17,7 @@ import {
 } from "recharts";
 
 import { API_BASE } from '../utils/api';
+import { cachedGet } from '../utils/apiCache';
 import { getStoredAuth } from '../utils/auth';
 import LoadingSpinner from "../components/LoadingSpinner";
 
@@ -38,8 +38,7 @@ export default function Dashboard() {
                 setIsStockLoading(true);
                 setFinanceError(null);
 
-                const res = await axios.get(`${API_BASE}/api/dashboard`);
-                const data = res.data;
+                const data = await cachedGet(`${API_BASE}/api/dashboard`);
 
                 const ws = data.weekSummary || {};
                 setTotals({ pemasukan: ws.pemasukan || 0, pengeluaran: ws.pengeluaran || 0, keuntunganBersih: ws.keuntunganBersih || 0 });

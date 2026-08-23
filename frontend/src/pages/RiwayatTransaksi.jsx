@@ -11,6 +11,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 import { API_BASE } from '../utils/api';
+import { cachedGet, invalidateApiCache, CACHE_PREFIXES } from '../utils/apiCache';
 import { normalizeTypeForm, isIncomeType } from '../utils/txType';
 import Pagination from "../components/Pagination";
 
@@ -53,18 +54,18 @@ export default function RiwayatTransaksi() {
         try {
             setIsLoading(true);
             if (searchQuery || filterType !== "Semua") {
-                const response = await axios.get(`${API_BASE}/api/transactions`);
-                setTransactions(response.data);
+                const data = await cachedGet(`${API_BASE}/api/transactions`);
+                setTransactions(data);
                 setTotalPages(1);
                 setPage(1);
             } else {
-                const response = await axios.get(`${API_BASE}/api/transactions`, { params: { page: p, limit: 20 } });
-                if (response.data && Array.isArray(response.data.data)) {
-                    setTransactions(response.data.data);
-                    setTotalPages(response.data.totalPages || 1);
-                    setPage(response.data.page || 1);
+                const data = await cachedGet(`${API_BASE}/api/transactions`, { params: { page: p, limit: 20 } });
+                if (data && Array.isArray(data.data)) {
+                    setTransactions(data.data);
+                    setTotalPages(data.totalPages || 1);
+                    setPage(data.page || 1);
                 } else {
-                    setTransactions(response.data);
+                    setTransactions(data);
                     setTotalPages(1);
                     setPage(1);
                 }
@@ -78,10 +79,7 @@ export default function RiwayatTransaksi() {
 
     useEffect(() => {
         fetchTransactions(page);
-    }, []);
-
-    useEffect(() => {
-        fetchTransactions(1);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchQuery, filterType]);
 
     const handleDeleteTransaction = async (id, label) => {
@@ -89,6 +87,7 @@ export default function RiwayatTransaksi() {
         if (confirmed) {
             try {
                 await axios.delete(`${API_BASE}/api/transactions/${id}`);
+                invalidateApiCache(...CACHE_PREFIXES.transactions);
                 fetchTransactions(page);
                 addToast('Transaksi berhasil dihapus', 'success');
             } catch (error) {
@@ -125,6 +124,7 @@ export default function RiwayatTransaksi() {
 
         try {
             await axios.put(`${API_BASE}/api/transactions/${editingId}`, payload);
+            invalidateApiCache(...CACHE_PREFIXES.transactions);
             setIsEditOpen(false);
             setEditingId(null);
             fetchTransactions(page);

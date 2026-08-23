@@ -87,6 +87,32 @@ function App() {
     initAuth();
   }, []);
 
+  // Prefetch semua chunk halaman saat browser idle,
+  // jadi ganti tab tidak perlu menunggu unduhan JS lagi.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const scheduleIdle = window.requestIdleCallback
+      ? window.requestIdleCallback.bind(window)
+      : (cb) => setTimeout(cb, 2000);
+    const cancelIdle = window.cancelIdleCallback
+      ? window.cancelIdleCallback.bind(window)
+      : clearTimeout;
+
+    const idleId = scheduleIdle(() => {
+      import("./pages/Dashboard");
+      import("./pages/Keuangan");
+      import("./pages/RiwayatTransaksi");
+      import("./pages/Produk");
+      import("./pages/Kasir");
+      import("./pages/Insight");
+      import("./pages/Settings");
+      import("./pages/Profile");
+    }, { timeout: 4000 });
+
+    return () => cancelIdle(idleId);
+  }, [isAuthenticated]);
+
   useEffect(() => {
     if (!isAuthenticated) return;
 

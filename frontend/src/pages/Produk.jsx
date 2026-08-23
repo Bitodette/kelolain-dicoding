@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { API_BASE } from '../utils/api';
+import { cachedGet, invalidateApiCache, CACHE_PREFIXES, TTL } from '../utils/apiCache';
 import { useToast } from "../components/Toast";
 import { useConfirm } from "../components/ConfirmDialog";
 import {
@@ -57,13 +58,13 @@ export default function Produk() {
     const fetchProducts = async (p = 1) => {
         try {
             setLoading(true);
-            const response = await axios.get(`${API_BASE}/api/products`, { params: { page: p, limit } });
-            if (response.data && Array.isArray(response.data.data)) {
-                setProducts(response.data.data);
-                setTotalPages(response.data.totalPages || 1);
-                setPage(response.data.page || 1);
+            const data = await cachedGet(`${API_BASE}/api/products`, { params: { page: p, limit } });
+            if (data && Array.isArray(data.data)) {
+                setProducts(data.data);
+                setTotalPages(data.totalPages || 1);
+                setPage(data.page || 1);
             } else {
-                setProducts(response.data);
+                setProducts(data);
                 setTotalPages(1);
                 setPage(1);
             }
@@ -78,8 +79,8 @@ export default function Produk() {
 
     const fetchCategories = async () => {
         try {
-            const response = await axios.get(`${API_BASE}/api/categories`);
-            setCategories(response.data || []);
+            const data = await cachedGet(`${API_BASE}/api/categories`, { ttl: TTL.long });
+            setCategories(data || []);
         } catch (err) {
             console.error("Gagal mengambil kategori:", err);
         }
@@ -100,6 +101,7 @@ export default function Produk() {
         if (!trimmedName) return addToast('Nama kategori wajib diisi', 'warning');
         try {
             await axios.post(`${API_BASE}/api/categories`, { name: trimmedName });
+            invalidateApiCache(...CACHE_PREFIXES.products);
             setNewCategoryName('');
             fetchCategories();
             addToast('Kategori berhasil dibuat', 'success');
@@ -113,6 +115,7 @@ export default function Produk() {
         if (!confirmed) return;
         try {
             await axios.delete(`${API_BASE}/api/categories/${id}`);
+            invalidateApiCache(...CACHE_PREFIXES.products);
             fetchCategories();
             addToast('Kategori berhasil dihapus', 'success');
         } catch (err) {
@@ -144,6 +147,7 @@ export default function Produk() {
             } else {
                 await axios.post(`${API_BASE}/api/products`, payload);
             }
+            invalidateApiCache(...CACHE_PREFIXES.products);
             setIsModalOpen(false);
             setEditingProduct(null);
             setFormData(EMPTY_FORM);
@@ -170,6 +174,7 @@ export default function Produk() {
         if (!confirmed) return;
         try {
             await axios.delete(`${API_BASE}/api/products/${id}`);
+            invalidateApiCache(...CACHE_PREFIXES.products);
             fetchProducts(page);
             addToast('Produk berhasil dihapus', 'success');
         } catch (err) {
@@ -193,6 +198,7 @@ export default function Produk() {
 
         try {
             await axios.post(`${API_BASE}/api/products/${restockProduct.id}/restock`, { quantity: qty, costPrice: cost });
+            invalidateApiCache(...CACHE_PREFIXES.products);
             setRestockProduct(null);
             fetchProducts(page);
             addToast('Restock berhasil', 'success');
@@ -444,6 +450,7 @@ export default function Produk() {
                         for (const item of validItems) {
                             await axios.post(`${API_BASE}/api/products/${item.linkedProduct.id}/restock`, { quantity: item.quantity, costPrice: item.price });
                         }
+                        invalidateApiCache(...CACHE_PREFIXES.products);
                         addToast('Stok berhasil diperbarui.', 'success');
                         fetchProducts(page);
                     } catch (err) {
