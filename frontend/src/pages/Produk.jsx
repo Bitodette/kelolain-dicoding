@@ -425,7 +425,7 @@ export default function Produk() {
                 onOpenCamera={scanner.openCamera}
                 onTriggerFileUpload={scanner.triggerFileUpload}
                 onExtract={scanner.handleExtractReceipt}
-                onRetry={() => { scanner.setSelectedReceiptFile(null); scanner.setSelectedReceiptPreview(null); scanner.setBlurStatus(null); scanner.setScanError(null); }}
+                onRetry={() => { scanner.setSelectedReceiptFile(null); scanner.setSelectedReceiptPreview(null); scanner.setBlurStatus(null); scanner.setScanError(null); scanner.openCamera(); }}
             />
 
             <ScanResultModal

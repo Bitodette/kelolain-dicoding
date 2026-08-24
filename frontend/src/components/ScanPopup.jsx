@@ -42,7 +42,7 @@ export default function ScanPopup({
 
                             <div className="grid gap-3 sm:grid-cols-2">
                                 <button onClick={onRetry} className="btn btn-secondary px-4 py-3 text-sm">
-                                    Coba Lagi
+                                    Ambil Ulang
                                 </button>
                                 <button
                                     onClick={onExtract}
