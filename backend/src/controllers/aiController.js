@@ -420,13 +420,13 @@ exports.scanReceipt = asyncHandler(async (req, res) => {
             contentType: req.file.mimetype,
         });
 
-        let isBlurry = false;
+        let blurResult = 'unknown';
         try {
             const blurRes = await axios.post(`${AI_BASE_URL}/predict/blur`, blurFormData, {
                 headers: blurFormData.getHeaders(),
                 timeout: 15000,
             });
-            isBlurry = blurRes.data?.prediction === 'blurry';
+            blurResult = blurRes.data?.prediction || blurRes.data?.result || 'unknown';
         } catch (err) {
             console.error('Blur check AI service error:', err.message);
             return res.status(503).json({
@@ -435,10 +435,12 @@ exports.scanReceipt = asyncHandler(async (req, res) => {
             });
         }
 
+        const isBlurry = blurResult.toLowerCase().includes('blur');
         if (isBlurry) {
             return res.status(422).json({
                 message: 'Gambar struk buram atau tidak jelas. Silakan coba lagi.',
                 error: 'blurry_image',
+                prediction: blurResult,
             });
         }
 
@@ -499,7 +501,7 @@ exports.checkReceiptBlur = asyncHandler(async (req, res) => {
             headers: blurFormData.getHeaders(),
         });
 
-        res.json({ prediction: blurResponse.data?.prediction || 'unknown' });
+        res.json(blurResponse.data);
     } catch (error) {
         console.error('Error during blur check:', error.message);
         res.status(500).json({ message: 'Gagal memeriksa ketajaman struk.' });
