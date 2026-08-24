@@ -266,14 +266,14 @@ export default function Produk() {
                     <input type="text" placeholder="Cari nama produk, kategori..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 text-xs bg-white border border-[#E6E8EC] rounded-xl outline-none focus:border-[#2936C4] transition-colors shadow-sm" />
                 </div>
-                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto relative">
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                     <div className="relative">
                         <button onClick={() => { setIsCategoryOpen(o => !o); setIsFilterOpen(false); }} className="appearance-none rounded-xl border border-[#E6E8EC] bg-white text-[#6B7280] text-xs font-medium outline-none cursor-pointer transition-colors px-4 py-2 flex items-center justify-center gap-2 hover:bg-gray-50">
                             <AdjustmentsHorizontalIcon className="w-4 h-4" />
                             {selectedCategory === 'All' ? 'Kategori' : selectedCategory}
                         </button>
                         {isCategoryOpen && (
-                            <div className="absolute mt-2 right-0 w-44 bg-white border border-[#E6E8EC] rounded-xl shadow-lg z-40">
+                            <div className="absolute mt-2 left-0 md:right-0 w-44 bg-white border border-[#E6E8EC] rounded-xl shadow-lg z-40">
                                 <ul className="p-2">
                                     {['All', ...categoryOptions].map((cat) => (
                                         <li key={cat}>
@@ -292,7 +292,7 @@ export default function Produk() {
                             {selectedStatus === 'All' ? 'Filter' : selectedStatus}
                         </button>
                         {isFilterOpen && (
-                            <div className="absolute mt-2 right-0 w-44 bg-white border border-[#E6E8EC] rounded-xl shadow-lg z-40">
+                            <div className="absolute mt-2 left-0 md:right-0 w-44 bg-white border border-[#E6E8EC] rounded-xl shadow-lg z-40">
                                 <ul className="p-2">
                                     {statuses.map(st => (
                                         <li key={st}>

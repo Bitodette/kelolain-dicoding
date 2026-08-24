@@ -180,7 +180,7 @@ export default function Dashboard() {
                     </div>
 
                     <div className="flex-1 flex flex-col min-h-0">
-                        <div className="flex-1 min-h-0 w-full">
+                        <div className="h-64 md:h-full w-full">
                             {isFinanceLoading ? (
                                 <div className="h-full w-full flex items-center justify-center"><LoadingSpinner text="" /></div>
                             ) : financeError ? (
