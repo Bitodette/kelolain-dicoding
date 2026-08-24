@@ -9,10 +9,14 @@ const AI_BASE_URL = process.env.AI_BASE_URL;
 const RECEIPT_SCANNER_URL = process.env.RECEIPT_SCANNER_URL;
 const MAX_DAILY_SCANS = 10;
 
-const redis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
+let redis = null;
+if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    const { Redis } = require('@upstash/redis');
+    redis = new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+}
 
 const CACHE_PREFIX = 'kelolain:ai-cache:';
 const CACHE_TTL_SEC = 3600;

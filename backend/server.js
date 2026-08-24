@@ -36,9 +36,9 @@ app.get('/', (req, res) => {
 app.use('/api', apiRoutes);
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-    console.log(`Server is running`);
+const PORT = process.env.PORT || 8080;
+const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port ${PORT}`);
 });
 
 process.on('SIGINT', async () => {

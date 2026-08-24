@@ -235,7 +235,7 @@ export default function Produk() {
                     </div>
                 </div>
                 <div className="flex flex-col sm:flex-row w-full xl:w-auto items-stretch sm:items-center gap-2 sm:gap-3 shrink-0 mt-1 xl:mt-0">
-                    <input type="file" ref={scanner.fileInputRef} onChange={scanner.handleFileSelect} className="hidden" accept="image/*" capture="environment" />
+                    <input type="file" ref={scanner.fileInputRef} onChange={scanner.handleFileSelect} className="hidden" accept="image/*" />
                     <button onClick={scanner.handleScanClick} disabled={scanner.isExtracting} className="btn btn-primary px-5 py-2.5 text-sm">
                         {scanner.isExtracting ? (
                             <>
