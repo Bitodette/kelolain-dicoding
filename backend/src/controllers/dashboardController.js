@@ -162,11 +162,12 @@ exports.getDashboardSummary = asyncHandler(async (req, res) => {
         return res.json(cached.data);
     }
 
-    const [aggregates, trend, lowStockItems, totalProductCount] = await Promise.all([
+    const [aggregates, trend, lowStockItems, totalProductCount, transactionCount] = await Promise.all([
         getWeekAggregates(prisma, orgId, range),
         getDailyTrend(prisma, orgId, range),
         getLowStockWithEstimation(prisma, orgId, now),
         prisma.product.count({ where: { organizationId: orgId } }),
+        prisma.transactions.count({ where: { organizationId: orgId, createdAt: { gte: range.start, lte: range.end } } }),
     ]);
 
     const result = {
@@ -174,7 +175,7 @@ exports.getDashboardSummary = asyncHandler(async (req, res) => {
             pemasukan: aggregates.pemasukan,
             pengeluaran: aggregates.pengeluaran,
             keuntunganBersih: aggregates.keuntunganBersih,
-            transactionCount: 0,
+            transactionCount,
             trend,
         },
         lowStockItems,
