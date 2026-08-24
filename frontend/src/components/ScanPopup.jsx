@@ -35,8 +35,8 @@ export default function ScanPopup({
                         <div className="space-y-4">
                             <div className="relative rounded-2xl border border-[#E6E8EC] bg-slate-50 max-h-[55vh] overflow-y-auto">
                                 <img src={selectedReceiptPreview} alt="Preview Struk" className="w-full h-auto" />
-                                <div className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${blurStatus === 'sharp' ? 'bg-emerald-100 text-emerald-700' : blurStatus === 'blurry' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
-                                    {blurStatus === 'checking' ? 'Memeriksa...' : blurStatus === 'sharp' ? 'Tajam' : blurStatus === 'blurry' ? 'Buram' : 'Tidak diketahui'}
+                                <div className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${blurStatus === 'blurry' ? 'bg-amber-100 text-amber-700' : blurStatus === 'checking' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-100 text-emerald-700'}`}>
+                                    {blurStatus === 'checking' ? 'Memeriksa...' : blurStatus.replace(/_/g, ' ')}
                                 </div>
                             </div>
 
@@ -64,7 +64,7 @@ export default function ScanPopup({
                             </div>
 
                             {blurStatus === 'blurry' && (
-                                <p className="text-sm text-amber-700">Foto struk tampak buram. Silakan ambil ulang atau upload ulang dengan pencahayaan lebih baik.</p>
+                                <p className="text-sm text-amber-700">Foto struk tampak buram ({blurStatus.replace(/_/g, ' ')}). Silakan ambil ulang dengan pencahayaan lebih baik.</p>
                             )}
                         </div>
                     )}
