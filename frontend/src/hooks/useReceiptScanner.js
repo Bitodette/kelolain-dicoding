@@ -139,7 +139,11 @@ export default function useReceiptScanner({ products, onScanComplete }) {
     }, [selectedReceiptPreview]);
 
     const openCamera = useCallback(() => {
-        cameraInputRef.current?.click();
+        if ('ontouchstart' in window) {
+            cameraInputRef.current?.click();
+        } else {
+            fileInputRef.current?.click();
+        }
     }, []);
 
     const closeCamera = useCallback(() => {}, []);
