@@ -128,11 +128,12 @@ export default function useReceiptScanner({ products, onScanComplete }) {
             const formData = new FormData();
             formData.append('receipt', file);
             const response = await axios.post(`${API_BASE}/api/ai/ocr/check-blur`, formData);
-            const prediction = response.data?.result || response.data?.prediction || 'unknown';
+            const data = response.data;
+            const prediction = data?.result || data?.prediction || JSON.stringify(data);
             const isBlurry = prediction.toLowerCase().includes('blur');
             setBlurStatus(isBlurry ? 'blurry' : prediction);
         } catch (err) {
-            console.error('Gagal memeriksa ketajaman gambar:', err);
+            console.error('Gagal memeriksa ketajaman gambar:', err?.response?.data || err.message);
             setBlurStatus('unknown');
         }
     }, [selectedReceiptPreview]);

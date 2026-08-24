@@ -501,6 +501,7 @@ exports.checkReceiptBlur = asyncHandler(async (req, res) => {
             headers: blurFormData.getHeaders(),
         });
 
+        console.log('Blur API raw response:', JSON.stringify(blurResponse.data));
         res.json(blurResponse.data);
     } catch (error) {
         console.error('Error during blur check:', error.message);
