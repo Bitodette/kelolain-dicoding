@@ -54,10 +54,8 @@ function normalizeOcrItems(responseData) {
 
 export default function useReceiptScanner({ products, onScanComplete }) {
     const fileInputRef = useRef(null);
-    const cameraVideoRef = useRef(null);
+    const cameraInputRef = useRef(null);
 
-    const [cameraStream, setCameraStream] = useState(null);
-    const [isCameraOpen, setIsCameraOpen] = useState(false);
     const [isScanPopupOpen, setIsScanPopupOpen] = useState(false);
     const [selectedReceiptFile, setSelectedReceiptFile] = useState(null);
     const [selectedReceiptPreview, setSelectedReceiptPreview] = useState(null);
@@ -137,57 +135,11 @@ export default function useReceiptScanner({ products, onScanComplete }) {
         }
     }, [selectedReceiptPreview]);
 
-    const openCamera = useCallback(async () => {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            setScanError('Browser Anda tidak mendukung akses kamera langsung. Silakan gunakan upload gambar.');
-            return;
-        }
-
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-            if (cameraVideoRef.current) {
-                cameraVideoRef.current.srcObject = stream;
-            }
-            setCameraStream(stream);
-            setIsCameraOpen(true);
-        } catch (err) {
-            console.error('Gagal membuka kamera:', err);
-            setScanError('Tidak dapat mengakses kamera. Pastikan izin kamera diizinkan.');
-        }
+    const openCamera = useCallback(() => {
+        cameraInputRef.current?.click();
     }, []);
 
-    const closeCamera = useCallback(() => {
-        if (cameraStream) {
-            cameraStream.getTracks().forEach(track => track.stop());
-        }
-        setCameraStream(null);
-        setIsCameraOpen(false);
-    }, [cameraStream]);
-
-    const captureCameraPhoto = useCallback(async () => {
-        if (!cameraVideoRef.current) return;
-
-        const video = cameraVideoRef.current;
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const context = canvas.getContext('2d');
-        if (!context) {
-            setScanError('Gagal mengambil gambar dari kamera.');
-            return;
-        }
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
-        if (!blob) {
-            setScanError('Gagal mengambil gambar dari kamera.');
-            return;
-        }
-
-        const file = new File([blob], 'receipt.jpg', { type: 'image/jpeg' });
-        closeCamera();
-        await handleReceiptFile(file);
-    }, [closeCamera, handleReceiptFile]);
+    const closeCamera = useCallback(() => {}, []);
 
     const handleScanClick = useCallback(() => {
         setIsScanPopupOpen(true);
@@ -241,9 +193,7 @@ export default function useReceiptScanner({ products, onScanComplete }) {
 
     return {
         fileInputRef,
-        cameraVideoRef,
-        cameraStream,
-        isCameraOpen,
+        cameraInputRef,
         isScanPopupOpen,
         selectedReceiptFile,
         selectedReceiptPreview,
@@ -260,7 +210,6 @@ export default function useReceiptScanner({ products, onScanComplete }) {
         triggerFileUpload,
         openCamera,
         closeCamera,
-        captureCameraPhoto,
         handleExtractReceipt,
         closeScanPopup,
     };

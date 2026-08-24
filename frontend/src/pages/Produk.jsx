@@ -236,6 +236,7 @@ export default function Produk() {
                 </div>
                 <div className="flex flex-col sm:flex-row w-full xl:w-auto items-stretch sm:items-center gap-2 sm:gap-3 shrink-0 mt-1 xl:mt-0">
                     <input type="file" ref={scanner.fileInputRef} onChange={scanner.handleFileSelect} className="hidden" accept="image/*" />
+                    <input type="file" ref={scanner.cameraInputRef} onChange={scanner.handleFileSelect} className="hidden" accept="image/*" capture="environment" />
                     <button onClick={scanner.handleScanClick} disabled={scanner.isExtracting} className="btn btn-primary px-5 py-2.5 text-sm">
                         {scanner.isExtracting ? (
                             <>
@@ -420,13 +421,9 @@ export default function Produk() {
                 blurStatus={scanner.blurStatus}
                 isExtracting={scanner.isExtracting}
                 scanError={scanner.scanError}
-                isCameraOpen={scanner.isCameraOpen}
-                cameraVideoRef={scanner.cameraVideoRef}
                 onClose={scanner.closeScanPopup}
                 onOpenCamera={scanner.openCamera}
                 onTriggerFileUpload={scanner.triggerFileUpload}
-                onCapturePhoto={scanner.captureCameraPhoto}
-                onCloseCamera={scanner.closeCamera}
                 onExtract={scanner.handleExtractReceipt}
                 onRetry={() => { scanner.setSelectedReceiptFile(null); scanner.setSelectedReceiptPreview(null); scanner.setBlurStatus(null); scanner.setScanError(null); }}
             />

@@ -2,8 +2,7 @@ import { XMarkIcon, ArrowUpOnSquareIcon, CameraIcon } from "@heroicons/react/24/
 
 export default function ScanPopup({
     isScanPopupOpen, selectedReceiptPreview, blurStatus, isExtracting, scanError,
-    isCameraOpen, cameraVideoRef,
-    onClose, onOpenCamera, onTriggerFileUpload, onCapturePhoto, onCloseCamera, onExtract, onRetry
+    onClose, onOpenCamera, onTriggerFileUpload, onExtract, onRetry
 }) {
     if (!isScanPopupOpen) return null;
 
@@ -72,16 +71,6 @@ export default function ScanPopup({
 
                     {scanError && (
                         <p className="text-sm text-red-600">{scanError}</p>
-                    )}
-
-                    {isCameraOpen && (
-                        <div className="space-y-3">
-                            <video ref={cameraVideoRef} className="w-full h-72 rounded-2xl bg-black object-cover" autoPlay playsInline muted />
-                            <div className="flex gap-3">
-                                <button onClick={onCapturePhoto} className="btn btn-primary px-4 py-3 text-sm flex-1">Ambil Foto</button>
-                                <button onClick={onCloseCamera} className="btn btn-secondary px-4 py-3 text-sm flex-1">Batal</button>
-                            </div>
-                        </div>
                     )}
                 </div>
             </div>
